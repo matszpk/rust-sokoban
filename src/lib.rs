@@ -77,12 +77,9 @@ pub enum CheckError {
     LockedPackApartWall{x: u32, y: u32},
     /// If 4 packs creates 2x2 box - place of 2x2 box.
     Locked4Packs{x: u32, y: u32},
-    /// If pack locked in some room by other pack - x1,y1 place of blocking pack,
-    /// x2,y2 - place of blocked pack.
-    LockedPackBy{x1: u32, y1: u32, x2: u32, y2: u32},
 }
 
-pub type CheckErrors<'a> = &'a[CheckError];
+pub type CheckErrors = Vec<CheckError>;
 
 pub enum ParseError {
     EmptyLines,
@@ -96,7 +93,7 @@ pub struct Level<'a> {
     name: &'a str,
     width: u32,
     height: u32,
-    area: &'a [Field],
+    area: Vec<Field>,
     moves: Vec<Direction>,
 }
 
@@ -114,8 +111,29 @@ impl<'a> Level<'a> {
         self.height
     }
     /// Get an area of the level.
-    pub fn area(&self) -> &'a [Field] {
-        self.area
+    pub fn area(&self) -> &Vec<Field> {
+        &self.area
+    }
+    
+    pub fn new(name: &'a str, width: u32, height: u32, area: Vec<Field>) -> Level<'a> {
+        Level{ name, width, height, area, moves: vec!() }
+    }
+    
+    pub fn from_string(name: &'a str, width: u32, height: u32, astr: &str)
+                    -> Level<'a> {
+        let area: Vec<Field> = astr.chars().map(|x| {
+            match x {
+                ' ' => Field::Empty,
+                '#' => Field::Wall,
+                '@' => Field::Player,
+                '+' => Field::PlayerInTarget,
+                '.' => Field::Target,
+                '$' => Field::Pack,
+                '*' => Field::PackInTarget,
+                _ => Field::Empty,
+            }
+        }).collect();
+        Level{ name, width, height, area: area, moves: vec!() }
     }
     
     /// Parse level from lines.
@@ -148,6 +166,11 @@ impl<'a> Level<'a> {
     /// Undo move. Return true if move undone.
     pub fn undo_move(&mut self) -> bool {
         false
+    }
+    
+    /// Get all moves.
+    pub fn moves(&self) -> &Vec<Direction> {
+        &self.moves
     }
 }
 
