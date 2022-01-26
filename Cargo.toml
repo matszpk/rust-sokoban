@@ -1,0 +1,22 @@
+[package]
+name = "sokoban"
+authors = ["Mateusz Szpakowski"]
+license = "GNU General Public License v3"
+readme = "README.md"
+version = "0.1.0"
+edition = "2021"
+description = "Sokoban game"
+categories = ["games"]
+keywords = ["game", "sokoban"]
+default-run = "sokoban"
+
+[[bin]]
+name = "sokoban"
+path = "src/main.rs"
+
+[lib]
+name = "sokobanlib"
+path = "src/lib.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
