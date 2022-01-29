@@ -17,7 +17,8 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-use std::io as io;
+use std::io;
+use std::fmt;
 
 /// Type represents direction of the move.
 pub enum Direction {
@@ -62,24 +63,59 @@ pub enum CheckError {
     /// No player.
     NoPlayer,
     /// No packs and targets.
-    NoPacksAndTarget,
+    NoPacksAndTargets,
     /// If level open (no closing walls) - place where level is open.
-    LevelOpen{x: u32, y: u32},
+    LevelOpen(u32, u32),
     /// If too few packs - number of required packs.
     TooFewPacks(u32),
     /// If too few targets - number of required targets.
     TooFewTargets(u32),
     /// If pack is not available for player - place of pack.
-    PackNotAvailable{x: u32, y: u32},
+    PackNotAvailable(u32, u32),
     /// If target not available for player - place of target.
-    TargetNotAvailable{x: u32, y: u32},
+    TargetNotAvailable(u32, u32),
     /// If pack locked apart wall - place of pack.
-    LockedPackApartWall{x: u32, y: u32},
+    LockedPackApartWall(u32, u32),
     /// If 4 packs creates 2x2 box - place of 2x2 box.
-    Locked4Packs{x: u32, y: u32},
+    Locked4Packs(u32, u32),
 }
 
-pub type CheckErrors = Vec<CheckError>;
+impl fmt::Display for CheckError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CheckError::NoPlayer => write!(f, "No player"),
+            CheckError::NoPacksAndTargets => write!(f, "No packs and targets"),
+            CheckError::LevelOpen(x, y) => write!(f, "Level open in {}x{}", x, y),
+            CheckError::TooFewPacks(x) => write!(f, "Too few packs - required {}", x),
+            CheckError::TooFewTargets(x) => write!(f, "Too few targets - required {}", x),
+            CheckError::PackNotAvailable(x, y) =>
+                write!(f, "Pack {}x{} not available", x, y),
+            CheckError::TargetNotAvailable(x, y) =>
+                write!(f, "Target {}x{} not available", x, y),
+            CheckError::LockedPackApartWall(x, y) =>
+                write!(f, "Locked pack {}x{} apart wall", x, y),
+            CheckError::Locked4Packs(x, y) =>
+                write!(f, "Locked 4 packs {}x{}", x, y),
+        }
+    }
+}
+
+pub struct CheckErrors(Vec<CheckError>);
+
+impl fmt::Display for CheckErrors {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.iter().fold(Ok(()), |r,x| r.and(write!(f, "{}. ", x)))
+    }
+}
+
+impl CheckErrors {
+    fn new() -> CheckErrors {
+        CheckErrors(Vec::new())
+    }
+    fn push(& mut self, e: CheckError) {
+        self.0.push(e)
+    }
+}
 
 pub enum ParseError {
     EmptyLines,
@@ -120,8 +156,15 @@ impl<'a> Level<'a> {
     }
     
     pub fn from_string(name: &'a str, width: u32, height: u32, astr: &str)
-                    -> Level<'a> {
-        let area: Vec<Field> = astr.chars().map(|x| {
+                    -> Result<Level<'a>, ParseError> {
+        let mut chrs = astr.chars().take(width as usize*height as usize);
+        let chrs2 = chrs.clone();
+        if let Some(p) = chrs.position(|x|
+                x!=' ' && x!='#' && x!='@' && x!='+' && x!='.' && x!='$' && x!='*' ) {
+            let pp = p as u32;
+            return Err(ParseError::WrongField{ x: pp%width, y: pp/width });
+        }
+        let area: Vec<Field> = chrs2.map(|x| {
             match x {
                 ' ' => Field::Empty,
                 '#' => Field::Wall,
@@ -133,7 +176,7 @@ impl<'a> Level<'a> {
                 _ => Field::Empty,
             }
         }).collect();
-        Level{ name, width, height, area: area, moves: vec!() }
+        Ok(Level{ name, width, height, area: area, moves: vec!() })
     }
     
     /// Parse level from lines.
@@ -174,6 +217,13 @@ impl<'a> Level<'a> {
     }
 }
 
+#[cfg(test)]
+mod test {
+}
+
 pub fn sokhello() {
-    println!("SokHello!")
+    let mut errors = CheckErrors::new();
+    errors.push(CheckError::LockedPackApartWall(4, 5));
+    errors.push(CheckError::Locked4Packs(7, 7));
+    println!("SokHello! {}", errors)
 }
