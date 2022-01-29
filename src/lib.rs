@@ -104,7 +104,11 @@ pub struct CheckErrors(Vec<CheckError>);
 
 impl fmt::Display for CheckErrors {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.iter().fold(Ok(()), |r,x| r.and(write!(f, "{}. ", x)))
+        self.0.iter().take(self.0.len()-1).fold(Ok(()),
+                |r,x| r.and(write!(f, "{}. ", x)))?;
+        if let Some(x) = self.0.last() {
+            write!(f, "{}.", x)
+        } else { Ok(()) }
     }
 }
 
@@ -225,5 +229,5 @@ pub fn sokhello() {
     let mut errors = CheckErrors::new();
     errors.push(CheckError::LockedPackApartWall(4, 5));
     errors.push(CheckError::Locked4Packs(7, 7));
-    println!("SokHello! {}", errors)
+    println!("SokHello! {}x", errors)
 }
