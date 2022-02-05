@@ -21,6 +21,7 @@ use std::io;
 use std::fmt;
 
 /// Type represents direction of the move.
+#[derive(PartialEq,Debug)]
 pub enum Direction {
     /// Move left.
     Left,
@@ -41,6 +42,7 @@ pub enum Direction {
 }
 
 /// Type represents field in level area.
+#[derive(PartialEq,Debug)]
 pub enum Field {
     /// Empty field.
     Empty,
@@ -121,6 +123,7 @@ impl CheckErrors {
     }
 }
 
+#[derive(PartialEq,Debug)]
 pub enum ParseError {
     EmptyLines,
     WrongField{x: u32, y: u32},
@@ -129,6 +132,7 @@ pub enum ParseError {
 /// Level in game. Name is optional name - can be empty. Width and height determines
 /// dimensions of the level. An area is fields of level ordered from top to bottom and
 /// from left to right.
+#[derive(PartialEq,Debug)]
 pub struct Level<'a> {
     name: &'a str,
     width: u32,
@@ -223,6 +227,17 @@ impl<'a> Level<'a> {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    
+    #[test]
+    fn test_level_from_string() {
+        let levela = Level::new("blable", 5, 3, vec![
+            Field::Wall, Field::Wall, Field::Wall, Field::Wall, Field::Wall,
+            Field::Wall, Field::Target, Field::Pack, Field::Player, Field::Wall,
+            Field::Wall, Field::Wall, Field::Wall, Field::Wall, Field::Wall]);
+        let levelb = Level::from_string("blable", 5, 3, "######.$@######");
+        assert_eq!(Ok(levela), levelb);
+    }
 }
 
 pub fn sokhello() {
