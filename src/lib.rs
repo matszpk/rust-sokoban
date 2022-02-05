@@ -126,8 +126,10 @@ impl CheckErrors {
 #[derive(PartialEq,Debug)]
 pub enum ParseError {
     EmptyLines,
-    WrongField{x: u32, y: u32},
+    WrongField(u32, u32),
 }
+
+use ParseError::*;
 
 /// Level in game. Name is optional name - can be empty. Width and height determines
 /// dimensions of the level. An area is fields of level ordered from top to bottom and
@@ -139,6 +141,19 @@ pub struct Level<'a> {
     height: u32,
     area: Vec<Field>,
     moves: Vec<Direction>,
+}
+
+fn char_to_field(x: char) -> Field {
+    match x {
+        ' ' => Empty,
+        '#' => Wall,
+        '@' => Player,
+        '+' => PlayerOnTarget,
+        '.' => Target,
+        '$' => Pack,
+        '*' => PackOnTarget,
+        _ => Empty,
+    }
 }
 
 impl<'a> Level<'a> {
@@ -170,25 +185,14 @@ impl<'a> Level<'a> {
         if let Some(p) = chrs.position(|x|
                 x!=' ' && x!='#' && x!='@' && x!='+' && x!='.' && x!='$' && x!='*' ) {
             let pp = p as u32;
-            return Err(ParseError::WrongField{ x: pp%width, y: pp/width });
+            return Err(ParseError::WrongField(pp%width, pp/width));
         }
-        let area: Vec<Field> = chrs2.map(|x| {
-            match x {
-                ' ' => Empty,
-                '#' => Wall,
-                '@' => Player,
-                '+' => PlayerOnTarget,
-                '.' => Target,
-                '$' => Pack,
-                '*' => PackOnTarget,
-                _ => Empty,
-            }
-        }).collect();
+        let area: Vec<Field> = chrs2.map(char_to_field).collect();
         Ok(Level{ name, width, height, area: area, moves: vec!() })
     }
     
     /// Parse level from lines.
-    pub fn from_file(name: &'a str, reader: &dyn io::Read) ->
+    pub fn from_lines<B>(reader: &io::Lines::<B>) ->
                     Result<Level<'a>, ParseError> {
         Err(ParseError::EmptyLines)
     }
@@ -259,6 +263,10 @@ mod test {
         let levelb = Level::from_string("git", 8, 6,
             " ###### #      ##   +.*##   $$ ##      # ###### ");
         assert_eq!(Ok(levela), levelb);
+        
+        let levelb = Level::from_string("git", 8, 6,
+            " ###### #      ##   +.*##   $$ ##  x   # ###### ");
+        assert_eq!(Err(WrongField(3,4)), levelb);
     }
 }
 
