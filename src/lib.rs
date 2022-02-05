@@ -82,22 +82,22 @@ pub enum CheckError {
     Locked4Packs(u32, u32),
 }
 
+use Field::*;
+use Direction::*;
+use CheckError::*;
+
 impl fmt::Display for CheckError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CheckError::NoPlayer => write!(f, "No player"),
-            CheckError::NoPacksAndTargets => write!(f, "No packs and targets"),
-            CheckError::LevelOpen(x, y) => write!(f, "Level open in {}x{}", x, y),
-            CheckError::TooFewPacks(x) => write!(f, "Too few packs - required {}", x),
-            CheckError::TooFewTargets(x) => write!(f, "Too few targets - required {}", x),
-            CheckError::PackNotAvailable(x, y) =>
-                write!(f, "Pack {}x{} not available", x, y),
-            CheckError::TargetNotAvailable(x, y) =>
-                write!(f, "Target {}x{} not available", x, y),
-            CheckError::LockedPackApartWall(x, y) =>
-                write!(f, "Locked pack {}x{} apart wall", x, y),
-            CheckError::Locked4Packs(x, y) =>
-                write!(f, "Locked 4 packs {}x{}", x, y),
+            NoPlayer => write!(f, "No player"),
+            NoPacksAndTargets => write!(f, "No packs and targets"),
+            LevelOpen(x, y) => write!(f, "Level open in {}x{}", x, y),
+            TooFewPacks(x) => write!(f, "Too few packs - required {}", x),
+            TooFewTargets(x) => write!(f, "Too few targets - required {}", x),
+            PackNotAvailable(x, y) => write!(f, "Pack {}x{} not available", x, y),
+            TargetNotAvailable(x, y) => write!(f, "Target {}x{} not available", x, y),
+            LockedPackApartWall(x, y) => write!(f, "Locked pack {}x{} apart wall", x, y),
+            Locked4Packs(x, y) => write!(f, "Locked 4 packs {}x{}", x, y),
         }
     }
 }
@@ -174,14 +174,14 @@ impl<'a> Level<'a> {
         }
         let area: Vec<Field> = chrs2.map(|x| {
             match x {
-                ' ' => Field::Empty,
-                '#' => Field::Wall,
-                '@' => Field::Player,
-                '+' => Field::PlayerOnTarget,
-                '.' => Field::Target,
-                '$' => Field::Pack,
-                '*' => Field::PackOnTarget,
-                _ => Field::Empty,
+                ' ' => Empty,
+                '#' => Wall,
+                '@' => Player,
+                '+' => PlayerOnTarget,
+                '.' => Target,
+                '$' => Pack,
+                '*' => PackOnTarget,
+                _ => Empty,
             }
         }).collect();
         Ok(Level{ name, width, height, area: area, moves: vec!() })
@@ -232,10 +232,32 @@ mod test {
     #[test]
     fn test_level_from_string() {
         let levela = Level::new("blable", 5, 3, vec![
-            Field::Wall, Field::Wall, Field::Wall, Field::Wall, Field::Wall,
-            Field::Wall, Field::Target, Field::Pack, Field::Player, Field::Wall,
-            Field::Wall, Field::Wall, Field::Wall, Field::Wall, Field::Wall]);
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, Target, Pack, Player, Wall,
+            Wall, Wall, Wall, Wall, Wall]);
         let levelb = Level::from_string("blable", 5, 3, "######.$@######");
+        assert_eq!(Ok(levela), levelb);
+        
+        let levela = Level::new("git", 8, 6, vec![
+            Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty,
+            Wall, Empty, Empty, Empty, Empty, Empty, Empty, Wall,
+            Wall, Player, Empty, Empty, Target, Target, Target, Wall,
+            Wall, Empty, Empty, Empty, Pack, Pack, Pack, Wall,
+            Wall, Empty, Empty, Empty, Empty, Empty, Empty, Wall,
+            Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty]);
+        let levelb = Level::from_string("git", 8, 6,
+            " ###### #      ##@  ...##   $$$##      # ###### ");
+        assert_eq!(Ok(levela), levelb);
+        
+        let levela = Level::new("git", 8, 6, vec![
+            Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty,
+            Wall, Empty, Empty, Empty, Empty, Empty, Empty, Wall,
+            Wall, Empty, Empty, Empty, PlayerOnTarget, Target, PackOnTarget, Wall,
+            Wall, Empty, Empty, Empty, Pack, Pack, Empty, Wall,
+            Wall, Empty, Empty, Empty, Empty, Empty, Empty, Wall,
+            Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty]);
+        let levelb = Level::from_string("git", 8, 6,
+            " ###### #      ##   +.*##   $$ ##      # ###### ");
         assert_eq!(Ok(levela), levelb);
     }
 }
