@@ -127,6 +127,7 @@ impl CheckErrors {
 pub enum ParseError {
     EmptyLines,
     WrongField(u32, u32),
+    WrongSize(u32, u32),
 }
 
 use ParseError::*;
@@ -156,6 +157,10 @@ fn char_to_field(x: char) -> Field {
     }
 }
 
+fn is_not_field(x: char) -> bool {
+    x!=' ' && x!='#' && x!='@' && x!='+' && x!='.' && x!='$' && x!='*'
+}
+
 impl<'a> Level<'a> {
     /// Get name of the level.
     pub fn name(&self) -> &'a str {
@@ -180,12 +185,14 @@ impl<'a> Level<'a> {
     
     pub fn from_string(name: &'a str, width: u32, height: u32, astr: &str)
                     -> Result<Level<'a>, ParseError> {
-        let mut chrs = astr.chars().take(width as usize*height as usize);
+        if astr.len() != (width as usize)*(height as usize) {
+            return Err(WrongSize(width, height));
+        }
+        let mut chrs = astr.chars();
         let chrs2 = chrs.clone();
-        if let Some(p) = chrs.position(|x|
-                x!=' ' && x!='#' && x!='@' && x!='+' && x!='.' && x!='$' && x!='*' ) {
+        if let Some(p) = chrs.position(is_not_field) {
             let pp = p as u32;
-            return Err(ParseError::WrongField(pp%width, pp/width));
+            return Err(WrongField(pp%width, pp/width));
         }
         let area: Vec<Field> = chrs2.map(char_to_field).collect();
         Ok(Level{ name, width, height, area: area, moves: vec!() })
@@ -194,7 +201,7 @@ impl<'a> Level<'a> {
     /// Parse level from lines.
     pub fn from_lines<B>(reader: &io::Lines::<B>) ->
                     Result<Level<'a>, ParseError> {
-        Err(ParseError::EmptyLines)
+        Err(EmptyLines)
     }
     
     /// Check level.
@@ -250,7 +257,12 @@ mod test {
             Wall, Empty, Empty, Empty, Empty, Empty, Empty, Wall,
             Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty]);
         let levelb = Level::from_string("git", 8, 6,
-            " ###### #      ##@  ...##   $$$##      # ###### ");
+            " ###### \
+             #      #\
+             #@  ...#\
+             #   $$$#\
+             #      # \
+              ###### ");
         assert_eq!(Ok(levela), levelb);
         
         let levela = Level::new("git", 8, 6, vec![
@@ -261,12 +273,30 @@ mod test {
             Wall, Empty, Empty, Empty, Empty, Empty, Empty, Wall,
             Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty]);
         let levelb = Level::from_string("git", 8, 6,
-            " ###### #      ##   +.*##   $$ ##      # ###### ");
+            " ###### \
+             #      #\
+             #   +.*#\
+             #   $$ #\
+             #      # \
+              ###### ");
         assert_eq!(Ok(levela), levelb);
         
         let levelb = Level::from_string("git", 8, 6,
-            " ###### #      ##   +.*##   $$ ##  x   # ###### ");
+            " ###### \
+             #      #\
+             #   +.*#\
+             #   $$ #\
+             #  x   # \
+              ###### ");
         assert_eq!(Err(WrongField(3,4)), levelb);
+        let levelb = Level::from_string("git", 8, 7,
+            " ###### \
+             #      #\
+             #   +.*#\
+             #   $$ #\
+             #      # \
+              ###### ");
+        assert_eq!(Err(WrongSize(8,7)), levelb);
     }
 }
 
