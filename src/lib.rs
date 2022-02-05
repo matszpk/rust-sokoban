@@ -52,10 +52,10 @@ pub enum Field {
     Player,
     /// Empty target.
     Target,
-    /// Box in target.
-    PackInTarget,
-    /// Player in target.
-    PlayerInTarget,
+    /// Box on target.
+    PackOnTarget,
+    /// Player on target.
+    PlayerOnTarget,
 }
 
 // Check level error.
@@ -173,10 +173,10 @@ impl<'a> Level<'a> {
                 ' ' => Field::Empty,
                 '#' => Field::Wall,
                 '@' => Field::Player,
-                '+' => Field::PlayerInTarget,
+                '+' => Field::PlayerOnTarget,
                 '.' => Field::Target,
                 '$' => Field::Pack,
-                '*' => Field::PackInTarget,
+                '*' => Field::PackOnTarget,
                 _ => Field::Empty,
             }
         }).collect();
