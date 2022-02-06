@@ -64,6 +64,8 @@ pub enum Field {
 pub enum CheckError {
     /// No player.
     NoPlayer,
+    /// Too many players.
+    TooManyPlayers,
     /// No packs and targets.
     NoPacksAndTargets,
     /// If level open (no closing walls) - place where level is open.
@@ -90,6 +92,7 @@ impl fmt::Display for CheckError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             NoPlayer => write!(f, "No player"),
+            TooManyPlayers => write!(f, "Too many players"),
             NoPacksAndTargets => write!(f, "No packs and targets"),
             LevelOpen(x, y) => write!(f, "Level open in {}x{}", x, y),
             TooFewPacks(x) => write!(f, "Too few packs - required {}", x),
@@ -118,8 +121,11 @@ impl CheckErrors {
     fn new() -> CheckErrors {
         CheckErrors(Vec::new())
     }
-    fn push(& mut self, e: CheckError) {
+    fn push(&mut self, e: CheckError) {
         self.0.push(e)
+    }
+    fn len(&self) -> usize {
+        self.0.len()
     }
 }
 
@@ -179,10 +185,12 @@ impl<'a> Level<'a> {
         &self.area
     }
     
+    // Create level from area data.
     pub fn new(name: &'a str, width: u32, height: u32, area: Vec<Field>) -> Level<'a> {
         Level{ name, width, height, area, moves: vec!() }
     }
     
+    // Parse level from string.
     pub fn from_string(name: &'a str, width: u32, height: u32, astr: &str)
                     -> Result<Level<'a>, ParseError> {
         if astr.len() != (width as usize)*(height as usize) {
@@ -206,7 +214,27 @@ impl<'a> Level<'a> {
     
     /// Check level.
     pub fn check(&self) -> Result<(), CheckErrors> {
-        Ok(())
+        let mut errors = CheckErrors::new();
+        let players_num = self.area.iter().filter(
+                |x| **x==Player || **x==PlayerOnTarget).count();
+        match players_num {
+            0 => errors.push(NoPlayer),
+            _ => errors.push(TooManyPlayers),
+        }
+        // check number of packs and targets.
+        let packs_num = self.area.iter().filter(
+                |x| **x==Pack || **x==PackOnTarget).count();
+        let targets_num = self.area.iter().filter(
+                |x| **x==Target || **x==PlayerOnTarget || **x==PackOnTarget).count();
+        if packs_num < targets_num {
+            errors.push(TooFewPacks(targets_num as u32));
+        } else if targets_num < packs_num {
+            errors.push(TooFewTargets(packs_num as u32));
+        }
+        
+        if errors.len() != 0 {
+            Err(errors)
+        } else { Ok(()) }
     }
     
     /// Reset level state to original state - undo all moves.
