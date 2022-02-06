@@ -228,60 +228,61 @@ impl<'a> Level<'a> {
     }
     
     fn check_level_by_fill(&self) -> bool {
+        struct StackItem{ x: usize, y: usize, d: Direction }
         // find player
         if let Some(pp) = self.area.iter().position(|x| x.is_player()) {
             let x = pp % self.width;
             let y = pp / self.width;
             //
             let mut filled = vec![false; self.width*self.height];
-            let mut stk = vec![(x,y,Left)];
+            let mut stk = vec![StackItem{x,y,d:Left}];
             let mut target_count = 0;
             let mut pack_count = 0;
             while stk.len() != 0 {
                 if let Some(it) = stk.last_mut() {
-                    if self.area[it.1*self.width + it.0] == Wall ||
-                        filled[it.1*self.width + it.0] {
+                    if self.area[it.y*self.width + it.x] == Wall ||
+                        filled[it.y*self.width + it.x] {
                         stk.pop();  // if wall or already filled
                     } else {
                         // fill this field
-                        if self.area[it.1*self.width + it.0].is_target() {
+                        if self.area[it.y*self.width + it.x].is_target() {
                             target_count+=1;
                         }
-                        if self.area[it.1*self.width + it.0].is_pack() {
+                        if self.area[it.y*self.width + it.x].is_pack() {
                             pack_count+=1;
                         }
-                        filled[it.1*self.width + it.0] = true;
+                        filled[it.y*self.width + it.x] = true;
                         // get next position
-                        let next_pos = match it.2 {
+                        let next_pos = match it.d {
                             Left => {
-                                it.2 = Right;
-                                if it.0 > 0 {
-                                    Some((it.0-1, it.1))
+                                it.d = Right;
+                                if it.x > 0 {
+                                    Some((it.x-1, it.y))
                                 } else { None }
                             },
                             Right => {
-                                it.2 = Down;
-                                if it.0+1 < self.width {
-                                    Some((it.0+1, it.1))
+                                it.d = Down;
+                                if it.x+1 < self.width {
+                                    Some((it.x+1, it.y))
                                 } else { None }
                             }
                             Down => {
-                                it.2 = Up;
-                                if it.1 > 0 {
-                                    Some((it.0, it.1-1))
+                                it.d = Up;
+                                if it.y > 0 {
+                                    Some((it.x, it.y-1))
                                 } else { None }
                             }
                             Up => {
-                                it.2 = NoDirection;
-                                if it.1+1 < self.height {
-                                    Some((it.0, it.1+1))
+                                it.d = NoDirection;
+                                if it.y+1 < self.height {
+                                    Some((it.x, it.y+1))
                                 } else { None }
                             }
                             _ => { None }
                         };
                         if let Some((x,y)) = next_pos {
-                            stk.push((x,y,Left)); // push next step
-                        } else if it.2 == NoDirection {
+                            stk.push(StackItem{x,y,d:Left}); // push next step
+                        } else if it.d == NoDirection {
                             stk.pop();  // all is filled
                         }
                     }
