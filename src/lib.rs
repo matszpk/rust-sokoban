@@ -19,45 +19,49 @@
 
 use std::io;
 use std::fmt;
+use int_enum::IntEnum;
 
 /// Type represents direction of the move.
-#[derive(PartialEq,Debug,Clone,Copy)]
+#[repr(u8)]
+#[derive(PartialEq,Debug,Clone,Copy,IntEnum)]
 pub enum Direction {
     /// Move left.
-    Left,
+    Left = 0,
     /// Move right.
-    Right,
+    Right = 1,
     /// Move up.
-    Up,
+    Up = 2,
     /// Move down.
-    Down,
+    Down = 3,
     /// Move and push left.
-    PushLeft,
+    PushLeft = 4,
     /// Move and push right.
-    PushRight,
+    PushRight = 5,
     /// Move and push up.
-    PushUp,
+    PushUp = 6,
     /// Move and push down.
-    PushDown,
+    PushDown = 7,
+    NoDirection = 8,
 }
 
 /// Type represents field in level area.
-#[derive(PartialEq,Debug,Clone,Copy)]
+#[repr(u8)]
+#[derive(PartialEq,Debug,Clone,Copy,IntEnum)]
 pub enum Field {
     /// Empty field.
-    Empty,
+    Empty = 0,
     /// Wall.
-    Wall,
+    Wall = 1,
     /// Box to move to target.
-    Pack,
+    Pack = 2,
     /// Player.
-    Player,
+    Player = 3,
     /// Empty target.
-    Target,
+    Target = 4,
     /// Box on target.
-    PackOnTarget,
+    PackOnTarget = 5,
     /// Player on target.
-    PlayerOnTarget,
+    PlayerOnTarget = 6,
 }
 
 // Check level error.
@@ -224,6 +228,57 @@ impl<'a> Level<'a> {
         Err(EmptyLines)
     }
     
+    fn check_level_by_fill(&self) -> bool {
+        // find player
+        if let Some(p) = self.area.iter().position(|x| x.is_player()) {
+            let pp = p as u32;
+            let x = pp % self.width;
+            let y = pp / self.width;
+            //
+            let mut filled = vec![false; (self.width*self.height) as usize];
+            let mut stk = vec![(x,y,Left)];
+            let mut target_count = 0;
+            let mut pack_count = 0;
+            while stk.len() != 0 {
+                if let Some(stkitem) = stk.last_mut() {
+                    let next_pos = match stkitem.2 {
+                        Left => {
+                            stkitem.2 = Right;
+                            if stkitem.0-1 >= 0 {
+                                Some((stkitem.0-1, stkitem.1))
+                            } else { None }
+                        },
+                        Right => {
+                            stkitem.2 = Down;
+                            if stkitem.0+1 < self.width {
+                                Some((stkitem.0+1, stkitem.1))
+                            } else { None }
+                        }
+                        Down => {
+                            stkitem.2 = Up;
+                            if stkitem.1-1 >= 0 {
+                                Some((stkitem.0, stkitem.1-1))
+                            } else { None }
+                        }
+                        Up => {
+                            stkitem.2 = NoDirection;
+                            if stkitem.1+1 < self.height {
+                                Some((stkitem.0, stkitem.1+1))
+                            } else { None }
+                        }
+                        _ => { None }
+                    };
+                    if let Some((x,y)) = next_pos {
+                        if self.area[(y*self.width+x) as usize] != Wall {
+                            stk.push((x,y,Left)); // push next step
+                        }
+                    }
+                }
+            }
+        }
+        false
+    }
+    
     /// Check level.
     pub fn check(&self) -> Result<(), CheckErrors> {
         let mut errors = CheckErrors::new();
@@ -240,6 +295,8 @@ impl<'a> Level<'a> {
         } else if targets_num < packs_num {
             errors.push(TooFewTargets(packs_num as u32));
         }
+        
+        // check whether level is open: by filling
         
         if errors.len() != 0 {
             Err(errors)
