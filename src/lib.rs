@@ -21,7 +21,7 @@ use std::io;
 use std::fmt;
 
 /// Type represents direction of the move.
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq,Debug,Clone,Copy)]
 pub enum Direction {
     /// Move left.
     Left,
