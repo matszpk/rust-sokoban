@@ -42,7 +42,7 @@ pub enum Direction {
 }
 
 /// Type represents field in level area.
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq,Debug,Clone,Copy)]
 pub enum Field {
     /// Empty field.
     Empty,
@@ -87,6 +87,18 @@ pub enum CheckError {
 use Field::*;
 use Direction::*;
 use CheckError::*;
+
+impl Field {
+    pub fn is_player(self) -> bool {
+        self == Player || self == PlayerOnTarget
+    }
+    pub fn is_pack(self) -> bool {
+        self == Pack || self == PackOnTarget
+    }
+    pub fn is_target(self) -> bool {
+        self == Target || self == PackOnTarget || self == PlayerOnTarget
+    }
+}
 
 impl fmt::Display for CheckError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -215,17 +227,14 @@ impl<'a> Level<'a> {
     /// Check level.
     pub fn check(&self) -> Result<(), CheckErrors> {
         let mut errors = CheckErrors::new();
-        let players_num = self.area.iter().filter(
-                |x| **x==Player || **x==PlayerOnTarget).count();
+        let players_num = self.area.iter().filter(|x| x.is_player()).count();
         match players_num {
             0 => errors.push(NoPlayer),
             _ => errors.push(TooManyPlayers),
         }
         // check number of packs and targets.
-        let packs_num = self.area.iter().filter(
-                |x| **x==Pack || **x==PackOnTarget).count();
-        let targets_num = self.area.iter().filter(
-                |x| **x==Target || **x==PlayerOnTarget || **x==PackOnTarget).count();
+        let packs_num = self.area.iter().filter(|x| x.is_pack()).count();
+        let targets_num = self.area.iter().filter(|x| x.is_target()).count();
         if packs_num < targets_num {
             errors.push(TooFewPacks(targets_num as u32));
         } else if targets_num < packs_num {
