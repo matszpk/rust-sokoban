@@ -72,8 +72,8 @@ pub enum CheckError {
     TooManyPlayers,
     /// No packs and targets.
     NoPacksAndTargets,
-    /// If level open (no closing walls) - place where level is open.
-    LevelOpen(usize, usize),
+    /// If level open (no closing walls).
+    LevelOpen,
     /// If too few packs - number of required packs.
     TooFewPacks(usize),
     /// If too few targets - number of required targets.
@@ -110,7 +110,7 @@ impl fmt::Display for CheckError {
             NoPlayer => write!(f, "No player"),
             TooManyPlayers => write!(f, "Too many players"),
             NoPacksAndTargets => write!(f, "No packs and targets"),
-            LevelOpen(x, y) => write!(f, "Level open in {}x{}", x, y),
+            LevelOpen => write!(f, "Level open"),
             TooFewPacks(x) => write!(f, "Too few packs - required {}", x),
             TooFewTargets(x) => write!(f, "Too few targets - required {}", x),
             PackNotAvailable(x, y) => write!(f, "Pack {}x{} not available", x, y),
@@ -228,7 +228,7 @@ impl<'a> Level<'a> {
     }
     
     fn check_level_by_fill(&self) -> bool {
-        struct StackItem{ x: usize, y: usize, d: Direction }
+        struct StackItem{ x: usize, y: usize, d: Direction, }
         // find player
         if let Some(pp) = self.area.iter().position(|x| x.is_player()) {
             let x = pp % self.width;
