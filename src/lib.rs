@@ -239,36 +239,50 @@ impl<'a> Level<'a> {
             let mut pack_count = 0;
             while stk.len() != 0 {
                 if let Some(stkitem) = stk.last_mut() {
-                    let next_pos = match stkitem.2 {
-                        Left => {
-                            stkitem.2 = Right;
-                            if stkitem.0-1 >= 0 {
-                                Some((stkitem.0-1, stkitem.1))
-                            } else { None }
-                        },
-                        Right => {
-                            stkitem.2 = Down;
-                            if stkitem.0+1 < self.width {
-                                Some((stkitem.0+1, stkitem.1))
-                            } else { None }
+                    if self.area[self.width*stkitem.1 + stkitem.0] == Wall ||
+                        filled[stkitem.1*self.width + stkitem.0] {
+                        stk.pop();  // if wall or already filled
+                    } else {
+                        // fill this field
+                        if self.area[stkitem.1*self.width + stkitem.0].is_target() {
+                            target_count+=1;
                         }
-                        Down => {
-                            stkitem.2 = Up;
-                            if stkitem.1-1 >= 0 {
-                                Some((stkitem.0, stkitem.1-1))
-                            } else { None }
+                        if self.area[stkitem.1*self.width + stkitem.0].is_pack() {
+                            pack_count+=1;
                         }
-                        Up => {
-                            stkitem.2 = NoDirection;
-                            if stkitem.1+1 < self.height {
-                                Some((stkitem.0, stkitem.1+1))
-                            } else { None }
-                        }
-                        _ => { None }
-                    };
-                    if let Some((x,y)) = next_pos {
-                        if self.area[y*self.width+x] != Wall {
+                        filled[stkitem.1*self.width + stkitem.0] = true;
+                        // get next position
+                        let next_pos = match stkitem.2 {
+                            Left => {
+                                stkitem.2 = Right;
+                                if stkitem.0 > 0 {
+                                    Some((stkitem.0-1, stkitem.1))
+                                } else { None }
+                            },
+                            Right => {
+                                stkitem.2 = Down;
+                                if stkitem.0+1 < self.width {
+                                    Some((stkitem.0+1, stkitem.1))
+                                } else { None }
+                            }
+                            Down => {
+                                stkitem.2 = Up;
+                                if stkitem.1 > 0 {
+                                    Some((stkitem.0, stkitem.1-1))
+                                } else { None }
+                            }
+                            Up => {
+                                stkitem.2 = NoDirection;
+                                if stkitem.1+1 < self.height {
+                                    Some((stkitem.0, stkitem.1+1))
+                                } else { None }
+                            }
+                            _ => { None }
+                        };
+                        if let Some((x,y)) = next_pos {
                             stk.push((x,y,Left)); // push next step
+                        } else if stkitem.2 == NoDirection {
+                            stk.pop();  // all is filled
                         }
                     }
                 }
