@@ -73,19 +73,19 @@ pub enum CheckError {
     /// No packs and targets.
     NoPacksAndTargets,
     /// If level open (no closing walls) - place where level is open.
-    LevelOpen(u32, u32),
+    LevelOpen(usize, usize),
     /// If too few packs - number of required packs.
-    TooFewPacks(u32),
+    TooFewPacks(usize),
     /// If too few targets - number of required targets.
-    TooFewTargets(u32),
+    TooFewTargets(usize),
     /// If pack is not available for player - place of pack.
-    PackNotAvailable(u32, u32),
+    PackNotAvailable(usize, usize),
     /// If target not available for player - place of target.
-    TargetNotAvailable(u32, u32),
+    TargetNotAvailable(usize, usize),
     /// If pack locked apart wall - place of pack.
-    LockedPackApartWall(u32, u32),
+    LockedPackApartWall(usize, usize),
     /// If 4 packs creates 2x2 box - place of 2x2 box.
-    Locked4Packs(u32, u32),
+    Locked4Packs(usize, usize),
 }
 
 use Field::*;
@@ -148,8 +148,8 @@ impl CheckErrors {
 #[derive(PartialEq,Debug)]
 pub enum ParseError {
     EmptyLines,
-    WrongField(u32, u32),
-    WrongSize(u32, u32),
+    WrongField(usize, usize),
+    WrongSize(usize, usize),
 }
 
 use ParseError::*;
@@ -160,8 +160,8 @@ use ParseError::*;
 #[derive(PartialEq,Debug)]
 pub struct Level<'a> {
     name: &'a str,
-    width: u32,
-    height: u32,
+    width: usize,
+    height: usize,
     area: Vec<Field>,
     moves: Vec<Direction>,
 }
@@ -189,11 +189,11 @@ impl<'a> Level<'a> {
         self.name
     }
     /// Get width of the level.
-    pub fn width(&self) -> u32 {
+    pub fn width(&self) -> usize {
         self.width
     }
     /// Get height of the level.
-    pub fn height(&self) -> u32 {
+    pub fn height(&self) -> usize {
         self.height
     }
     /// Get an area of the level.
@@ -202,20 +202,19 @@ impl<'a> Level<'a> {
     }
     
     // Create level from area data.
-    pub fn new(name: &'a str, width: u32, height: u32, area: Vec<Field>) -> Level<'a> {
+    pub fn new(name: &'a str, width: usize, height: usize, area: Vec<Field>) -> Level<'a> {
         Level{ name, width, height, area, moves: vec!() }
     }
     
     // Parse level from string.
-    pub fn from_string(name: &'a str, width: u32, height: u32, astr: &str)
+    pub fn from_string(name: &'a str, width: usize, height: usize, astr: &str)
                     -> Result<Level<'a>, ParseError> {
-        if astr.len() != (width as usize)*(height as usize) {
+        if astr.len() != width*height {
             return Err(WrongSize(width, height));
         }
         let mut chrs = astr.chars();
         let chrs2 = chrs.clone();
-        if let Some(p) = chrs.position(is_not_field) {
-            let pp = p as u32;
+        if let Some(pp) = chrs.position(is_not_field) {
             return Err(WrongField(pp%width, pp/width));
         }
         let area: Vec<Field> = chrs2.map(char_to_field).collect();
@@ -230,12 +229,11 @@ impl<'a> Level<'a> {
     
     fn check_level_by_fill(&self) -> bool {
         // find player
-        if let Some(p) = self.area.iter().position(|x| x.is_player()) {
-            let pp = p as u32;
+        if let Some(pp) = self.area.iter().position(|x| x.is_player()) {
             let x = pp % self.width;
             let y = pp / self.width;
             //
-            let mut filled = vec![false; (self.width*self.height) as usize];
+            let mut filled = vec![false; self.width*self.height];
             let mut stk = vec![(x,y,Left)];
             let mut target_count = 0;
             let mut pack_count = 0;
@@ -269,7 +267,7 @@ impl<'a> Level<'a> {
                         _ => { None }
                     };
                     if let Some((x,y)) = next_pos {
-                        if self.area[(y*self.width+x) as usize] != Wall {
+                        if self.area[y*self.width+x] != Wall {
                             stk.push((x,y,Left)); // push next step
                         }
                     }
@@ -291,9 +289,9 @@ impl<'a> Level<'a> {
         let packs_num = self.area.iter().filter(|x| x.is_pack()).count();
         let targets_num = self.area.iter().filter(|x| x.is_target()).count();
         if packs_num < targets_num {
-            errors.push(TooFewPacks(targets_num as u32));
+            errors.push(TooFewPacks(targets_num));
         } else if targets_num < packs_num {
-            errors.push(TooFewTargets(packs_num as u32));
+            errors.push(TooFewTargets(packs_num));
         }
         
         // check whether level is open: by filling
