@@ -641,6 +641,38 @@ mod test {
         errors.push(LockedPackApartWalls(6, 4));
         assert_eq!(Err(errors), level.check());
         
+        // some random level
+        let level = Level::from_string("git", 10, 8,
+            " ####     \
+             ##  ##### \
+             #  $  $ # \
+             # $*..* ##\
+             #  *$$.  #\
+             #@ *.*.  #\
+             ####   ###   \
+                #####  ")?;
+        assert_eq!(Ok(()), level.check());
+        
+        // some original level
+        let level = Level::from_string("git", 20, 16,
+            "####################\
+             #..#    #          #\
+             #.$  $  #$$  $## $##\
+             #.$#  ###  ## ##   #\
+             #  # $ #  $$   $   #\
+             # ###  # #  #$  ####\
+             #  ## # $   #@ #   #\
+             # $    $  ##.##  $ #\
+             #  # $# $# $     ###\
+             #  #  #  #   ###   #\
+             #  ######## #      #\
+             #           #  #.#.#\
+             ##$########$#   ...#\
+             #    .*  #    ##.#.#\
+             # .*...*   $  .....#\
+             ####################")?;
+        assert_eq!(Ok(()), level.check());
+        
         Ok(())
     }
 }
