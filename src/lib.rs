@@ -142,6 +142,7 @@ impl fmt::Debug for CheckErrors {
     }
 }
 
+/// Type contains all check errors.
 impl CheckErrors {
     fn new() -> CheckErrors {
         CheckErrors(Vec::new())
@@ -155,6 +156,7 @@ impl CheckErrors {
 }
 
 #[derive(PartialEq,Debug)]
+// Error caused while parsing or creating level.
 pub enum ParseError {
     EmptyLines,
     WrongField(usize, usize),
@@ -211,8 +213,13 @@ impl Level {
     }
     
     // Create level from area data.
-    pub fn new(name: &str, width: usize, height: usize, area: Vec<Field>) -> Level {
-        Level{ name: String::from(name), width, height, area, moves: vec!() }
+    pub fn new(name: &str, width: usize, height: usize, area: Vec<Field>)
+                    -> Result<Level, ParseError> {
+        if area.len() == width*height {
+            Ok(Level{ name: String::from(name), width, height, area, moves: vec!() })
+        } else {
+            Err(WrongSize(width, height))
+        }
     }
     
     // Parse level from string.
@@ -440,8 +447,9 @@ mod test {
             Wall, Wall, Wall, Wall, Wall,
             Wall, Target, Pack, Player, Wall,
             Wall, Wall, Wall, Wall, Wall]);
+        assert!(levela.is_ok());
         let levelb = Level::from_string("blable", 5, 3, "######.$@######");
-        assert_eq!(Ok(levela), levelb);
+        assert_eq!(levela, levelb);
         
         let levela = Level::new("git", 8, 6, vec![
             Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty,
@@ -450,6 +458,7 @@ mod test {
             Wall, Empty, Empty, Empty, Pack, Pack, Pack, Wall,
             Wall, Empty, Empty, Empty, Empty, Empty, Empty, Wall,
             Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty]);
+        assert!(levela.is_ok());
         let levelb = Level::from_string("git", 8, 6,
             " ###### \
              #      #\
@@ -457,7 +466,7 @@ mod test {
              #   $$$#\
              #      # \
               ###### ");
-        assert_eq!(Ok(levela), levelb);
+        assert_eq!(levela, levelb);
         
         let levela = Level::new("git", 8, 6, vec![
             Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty,
@@ -466,6 +475,7 @@ mod test {
             Wall, Empty, Empty, Empty, Pack, Pack, Empty, Wall,
             Wall, Empty, Empty, Empty, Empty, Empty, Empty, Wall,
             Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty]);
+        assert!(levela.is_ok());
         let levelb = Level::from_string("git", 8, 6,
             " ###### \
              #      #\
@@ -473,7 +483,7 @@ mod test {
              #   $$ #\
              #      # \
               ###### ");
-        assert_eq!(Ok(levela), levelb);
+        assert_eq!(levela, levelb);
         
         let levelb = Level::from_string("git", 8, 6,
             " ###### \
