@@ -64,8 +64,8 @@ pub enum Field {
     PlayerOnTarget = 6,
 }
 
-// Check level error.
 #[derive(PartialEq)]
+/// Check level error.
 pub enum CheckError {
     /// No player.
     NoPlayer,
@@ -124,6 +124,7 @@ impl fmt::Display for CheckError {
 }
 
 #[derive(PartialEq)]
+/// Type contains all check errors.
 pub struct CheckErrors(Vec<CheckError>);
 
 impl fmt::Display for CheckErrors {
@@ -142,7 +143,6 @@ impl fmt::Debug for CheckErrors {
     }
 }
 
-/// Type contains all check errors.
 impl CheckErrors {
     fn new() -> CheckErrors {
         CheckErrors(Vec::new())
@@ -156,10 +156,13 @@ impl CheckErrors {
 }
 
 #[derive(PartialEq,Debug)]
-// Error caused while parsing or creating level.
+/// Error caused while parsing or creating level.
 pub enum ParseError {
+    /// If empty lines.
     EmptyLines,
+    /// If wrong field.
     WrongField(usize, usize),
+    /// If wrong size.
     WrongSize(usize, usize),
 }
 
