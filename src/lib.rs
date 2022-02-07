@@ -167,8 +167,8 @@ use ParseError::*;
 /// dimensions of the level. An area is fields of level ordered from top to bottom and
 /// from left to right.
 #[derive(PartialEq,Debug)]
-pub struct Level<'a> {
-    name: &'a str,
+pub struct Level {
+    name: String,
     width: usize,
     height: usize,
     area: Vec<Field>,
@@ -192,10 +192,10 @@ fn is_not_field(x: char) -> bool {
     x!=' ' && x!='#' && x!='@' && x!='+' && x!='.' && x!='$' && x!='*'
 }
 
-impl<'a> Level<'a> {
+impl Level {
     /// Get name of the level.
-    pub fn name(&self) -> &'a str {
-        self.name
+    pub fn name(&self) -> &String {
+        &self.name
     }
     /// Get width of the level.
     pub fn width(&self) -> usize {
@@ -211,13 +211,13 @@ impl<'a> Level<'a> {
     }
     
     // Create level from area data.
-    pub fn new(name: &'a str, width: usize, height: usize, area: Vec<Field>) -> Level<'a> {
-        Level{ name, width, height, area, moves: vec!() }
+    pub fn new(name: &str, width: usize, height: usize, area: Vec<Field>) -> Level {
+        Level{ name: String::from(name), width, height, area, moves: vec!() }
     }
     
     // Parse level from string.
-    pub fn from_string(name: &'a str, width: usize, height: usize, astr: &str)
-                    -> Result<Level<'a>, ParseError> {
+    pub fn from_string(name: &str, width: usize, height: usize, astr: &str)
+                    -> Result<Level, ParseError> {
         if astr.len() != width*height {
             return Err(WrongSize(width, height));
         }
@@ -227,12 +227,12 @@ impl<'a> Level<'a> {
             return Err(WrongField(pp%width, pp/width));
         }
         let area: Vec<Field> = chrs2.map(char_to_field).collect();
-        Ok(Level{ name, width, height, area: area, moves: vec!() })
+        Ok(Level{ name: String::from(name), width, height, area: area, moves: vec!() })
     }
     
     /// Parse level from lines.
     pub fn from_lines<B>(reader: &io::Lines::<B>) ->
-                    Result<Level<'a>, ParseError> {
+                    Result<Level, ParseError> {
         Err(EmptyLines)
     }
     
