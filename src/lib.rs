@@ -65,6 +65,7 @@ pub enum Field {
 }
 
 // Check level error.
+#[derive(PartialEq)]
 pub enum CheckError {
     /// No player.
     NoPlayer,
@@ -83,7 +84,7 @@ pub enum CheckError {
     /// If target not available for player - place of target.
     TargetNotAvailable(usize, usize),
     /// If pack locked apart wall - place of pack.
-    LockedPackApartWall(usize, usize),
+    LockedPackApartWalls(usize, usize),
     /// If walls and packs creates 2x2 block - place of 2x2 block.
     Locked2x2Block(usize, usize),
 }
@@ -115,12 +116,14 @@ impl fmt::Display for CheckError {
             TooFewTargets(x) => write!(f, "Too few targets - required {}", x),
             PackNotAvailable(x, y) => write!(f, "Pack {}x{} not available", x, y),
             TargetNotAvailable(x, y) => write!(f, "Target {}x{} not available", x, y),
-            LockedPackApartWall(x, y) => write!(f, "Locked pack {}x{} apart wall", x, y),
+            LockedPackApartWalls(x, y) =>
+                write!(f, "Locked pack {}x{} apart walls", x, y),
             Locked2x2Block(x, y) => write!(f, "Locked 2x2 block {}x{}", x, y),
         }
     }
 }
 
+#[derive(PartialEq)]
 pub struct CheckErrors(Vec<CheckError>);
 
 impl fmt::Display for CheckErrors {
@@ -130,6 +133,12 @@ impl fmt::Display for CheckErrors {
         if let Some(x) = self.0.last() {
             write!(f, "{}.", x)
         } else { Ok(()) }
+    }
+}
+
+impl fmt::Debug for CheckErrors {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (self as &dyn fmt::Display).fmt(f)
     }
 }
 
@@ -327,6 +336,7 @@ impl<'a> Level<'a> {
         let players_num = self.area.iter().filter(|x| x.is_player()).count();
         match players_num {
             0 => errors.push(NoPlayer),
+            1 => {}
             _ => errors.push(TooManyPlayers),
         }
         // check number of packs and targets.
@@ -383,7 +393,7 @@ impl<'a> Level<'a> {
                         (field_d == Wall && (field_l == Wall || field_r == Wall)) ||
                         (field_l == Wall && (field_u == Wall || field_d == Wall)) ||
                         (field_r == Wall && (field_u == Wall || field_d == Wall)) {
-                        errors.push(LockedPackApartWall(ix, iy));
+                        errors.push(LockedPackApartWalls(ix, iy));
                     }
                 }
             }
@@ -483,11 +493,24 @@ mod test {
               ###### ");
         assert_eq!(Err(WrongSize(8,7)), levelb);
     }
+    
+    #[test]
+    fn test_check() -> Result<(), ParseError> {
+        let levelb = Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             #@  ...#\
+             #   $$$#\
+             #      # \
+              ###### ")?;
+        assert_eq!(Ok(()), levelb.check());
+        Ok(())
+    }
 }
 
 pub fn sokhello() {
     let mut errors = CheckErrors::new();
-    errors.push(CheckError::LockedPackApartWall(4, 5));
+    errors.push(CheckError::LockedPackApartWalls(4, 5));
     errors.push(CheckError::Locked2x2Block(7, 7));
     println!("SokHello! {}x", errors)
 }
