@@ -237,6 +237,7 @@ impl<'a> Level<'a> {
     }
     
     fn check_level_by_fill(&self, px: usize, py: usize, errors: &mut CheckErrors) {
+        #[derive(Debug)]
         struct StackItem{ x: usize, y: usize, d: Direction }
         // find player
         let mut filled = vec![false; self.width*self.height];
@@ -249,7 +250,7 @@ impl<'a> Level<'a> {
         while stk.len() != 0 {
             if let Some(it) = stk.last_mut() {
                 if self.area[it.y*self.width + it.x] == Wall ||
-                    filled[it.y*self.width + it.x] {
+                    (filled[it.y*self.width + it.x] && it.d==Left) {
                     stk.pop();  // if wall or already filled
                 } else {
                     // fill this field
