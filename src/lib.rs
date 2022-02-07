@@ -84,8 +84,8 @@ pub enum CheckError {
     TargetNotAvailable(usize, usize),
     /// If pack locked apart wall - place of pack.
     LockedPackApartWall(usize, usize),
-    /// If 4 packs creates 2x2 box - place of 2x2 box.
-    Locked4Packs(usize, usize),
+    /// If walls and packs creates 2x2 block - place of 2x2 block.
+    Locked2x2Block(usize, usize),
 }
 
 use Field::*;
@@ -116,7 +116,7 @@ impl fmt::Display for CheckError {
             PackNotAvailable(x, y) => write!(f, "Pack {}x{} not available", x, y),
             TargetNotAvailable(x, y) => write!(f, "Target {}x{} not available", x, y),
             LockedPackApartWall(x, y) => write!(f, "Locked pack {}x{} apart wall", x, y),
-            Locked4Packs(x, y) => write!(f, "Locked 4 packs {}x{}", x, y),
+            Locked2x2Block(x, y) => write!(f, "Locked 2x2 block {}x{}", x, y),
         }
     }
 }
@@ -227,96 +227,98 @@ impl<'a> Level<'a> {
         Err(EmptyLines)
     }
     
-    fn check_level_by_fill(&self, errors: &mut CheckErrors) {
-        struct StackItem{ x: usize, y: usize, d: Direction, }
+    fn check_level_by_fill(&self, px: usize, py: usize, errors: &mut CheckErrors) {
+        struct StackItem{ x: usize, y: usize, d: Direction }
         // find player
-        if let Some(pp) = self.area.iter().position(|x| x.is_player()) {
-            let x = pp % self.width;
-            let y = pp / self.width;
-            //
-            let mut filled = vec![false; self.width*self.height];
-            let mut stk = vec![StackItem{x,y,d:Left}];
-            
-            let mut target_count = 0;
-            let mut pack_count = 0;
-            let mut touch_frames = false;
-            
-            while stk.len() != 0 {
-                if let Some(it) = stk.last_mut() {
-                    if self.area[it.y*self.width + it.x] == Wall ||
-                        filled[it.y*self.width + it.x] {
-                        stk.pop();  // if wall or already filled
-                    } else {
-                        // fill this field
-                        if self.area[it.y*self.width + it.x].is_target() {
-                            target_count+=1;
-                        }
-                        if self.area[it.y*self.width + it.x].is_pack() {
-                            pack_count+=1;
-                        }
-                        filled[it.y*self.width + it.x] = true;
-                        // get next position
-                        let next_pos = match it.d {
-                            Left => {
-                                it.d = Right;
-                                if it.x > 0 {
-                                    Some((it.x-1, it.y))
-                                } else {
-                                    touch_frames = true;
-                                    None
-                                }
-                            },
-                            Right => {
-                                it.d = Down;
-                                if it.x+1 < self.width {
-                                    Some((it.x+1, it.y))
-                                } else {
-                                    touch_frames = true;
-                                    None
-                                }
+        let mut filled = vec![false; self.width*self.height];
+        let mut stk = vec![StackItem{x: px, y: py, d:Left}];
+        
+        let mut target_count = 0;
+        let mut pack_count = 0;
+        let mut touch_frames = false;
+        
+        while stk.len() != 0 {
+            if let Some(it) = stk.last_mut() {
+                if self.area[it.y*self.width + it.x] == Wall ||
+                    filled[it.y*self.width + it.x] {
+                    stk.pop();  // if wall or already filled
+                } else {
+                    // fill this field
+                    if self.area[it.y*self.width + it.x].is_target() {
+                        target_count+=1;
+                    }
+                    if self.area[it.y*self.width + it.x].is_pack() {
+                        pack_count+=1;
+                    }
+                    filled[it.y*self.width + it.x] = true;
+                    // get next position
+                    let next_pos = match it.d {
+                        Left => {
+                            it.d = Right;
+                            if it.x > 0 {
+                                Some((it.x-1, it.y))
+                            } else {
+                                touch_frames = true;
+                                None
                             }
-                            Down => {
-                                it.d = Up;
-                                if it.y > 0 {
-                                    Some((it.x, it.y-1))
-                                } else {
-                                    touch_frames = true;
-                                    None
-                                }
+                        },
+                        Right => {
+                            it.d = Down;
+                            if it.x+1 < self.width {
+                                Some((it.x+1, it.y))
+                            } else {
+                                touch_frames = true;
+                                None
                             }
-                            Up => {
-                                it.d = NoDirection;
-                                if it.y+1 < self.height {
-                                    Some((it.x, it.y+1))
-                                } else {
-                                    touch_frames = true;
-                                    None
-                                }
-                            }
-                            _ => { None }
-                        };
-                        if let Some((x,y)) = next_pos {
-                            stk.push(StackItem{x,y,d:Left}); // push next step
-                        } else if it.d == NoDirection {
-                            stk.pop();  // all is filled
                         }
+                        Down => {
+                            it.d = Up;
+                            if it.y > 0 {
+                                Some((it.x, it.y-1))
+                            } else {
+                                touch_frames = true;
+                                None
+                            }
+                        }
+                        Up => {
+                            it.d = NoDirection;
+                            if it.y+1 < self.height {
+                                Some((it.x, it.y+1))
+                            } else {
+                                touch_frames = true;
+                                None
+                            }
+                        }
+                        _ => { None }
+                    };
+                    if let Some((x,y)) = next_pos {
+                        stk.push(StackItem{x,y,d:Left}); // push next step
+                    } else if it.d == NoDirection {
+                        stk.pop();  // all is filled
                     }
                 }
             }
-            
-            if target_count < pack_count {
-                errors.push(TooFewTargets(pack_count));
-            } else if target_count < pack_count {
-                errors.push(TooFewTargets(target_count));
-            }
-            if touch_frames {
-                errors.push(LevelOpen);
-            }
         }
-    }
-    
-    fn check_level_by_traverse(&self, errors: &mut CheckErrors) {
         
+        if target_count < pack_count {
+            errors.push(TooFewTargets(pack_count));
+        } else if target_count < pack_count {
+            errors.push(TooFewTargets(target_count));
+        }
+        if touch_frames {
+            errors.push(LevelOpen);
+        }
+        // check availability
+        self.area.iter().enumerate().for_each(|(i,x)| {
+            if *x == Pack && !filled[i] {
+                errors.push(PackNotAvailable(i % self.width, i / self.width))
+            }
+        });
+        self.area.iter().enumerate().for_each(|(i,x)| {
+            if *x == Target && !filled[i] {
+                errors.push(TargetNotAvailable(i % self.width, i / self.width))
+            }
+        });
     }
     
     /// Check level.
@@ -336,7 +338,60 @@ impl<'a> Level<'a> {
             errors.push(TooFewTargets(packs_num));
         }
         
-        // check whether level is open: by filling
+        if let Some(pp) = self.area.iter().position(|x| x.is_player()) {
+            let x = pp % self.width;
+            let y = pp / self.width;
+            self.check_level_by_fill(x, y, &mut errors);
+        }
+        // find locks
+        for iy in 0..self.height-1 {
+            for ix in 0..self.width-1 {
+                let field_ul = self.area[iy*self.width + ix];
+                let field_ur = self.area[iy*self.width + ix+1];
+                let field_dl = self.area[(iy+1)*self.width + ix];
+                let field_dr = self.area[(iy+1)*self.width + ix+1];
+                if (field_ul.is_pack() || field_ul==Wall)  &&
+                    (field_ur.is_pack() || field_ur==Wall) &&
+                    (field_dl.is_pack() || field_dl==Wall) &&
+                    (field_dr.is_pack() || field_dr==Wall) {
+                    let mut packs = 0;
+                    if field_ul.is_pack() { packs+=1; }
+                    if field_ur.is_pack() { packs+=1; }
+                    if field_dl.is_pack() { packs+=1; }
+                    if field_dr.is_pack() { packs+=1; }
+                    let mut packs_on_target = 0;
+                    if field_ul == PackOnTarget { packs_on_target+=1; }
+                    if field_ur == PackOnTarget { packs_on_target+=1; }
+                    if field_dl == PackOnTarget { packs_on_target+=1; }
+                    if field_dr == PackOnTarget { packs_on_target+=1; }
+                    // only if not all packs in target
+                    if packs_on_target != packs {
+                        errors.push(Locked2x2Block(ix, iy));
+                    }
+                }
+            }
+        }
+        for iy in 1..self.height-1 {
+            for ix in 1..self.width-1 {
+                let field_ul = self.area[(iy-1)*self.width + ix-1];
+                let field_u = self.area[(iy-1)*self.width + ix];
+                let field_ur = self.area[(iy-1)*self.width + ix+1];
+                let field_l = self.area[iy*self.width + ix-1];
+                let field = self.area[iy*self.width + ix];
+                let field_r = self.area[iy*self.width + ix+1];
+                let field_dl = self.area[(iy+1)*self.width + ix-1];
+                let field_d = self.area[(iy+1)*self.width + ix];
+                let field_dr = self.area[(iy+1)*self.width + ix+1];
+                if field == Pack {
+                    if (field_u == Wall && field_l == Wall && field_r == Wall) ||
+                        (field_d == Wall && field_l == Wall && field_r == Wall) ||
+                        (field_l == Wall && field_u == Wall && field_d == Wall) ||
+                        (field_r == Wall && field_u == Wall && field_d == Wall) {
+                        errors.push(LockedPackApartWall(ix, iy));
+                    }
+                }
+            }
+        }
         
         if errors.len() != 0 {
             Err(errors)
@@ -437,6 +492,6 @@ mod test {
 pub fn sokhello() {
     let mut errors = CheckErrors::new();
     errors.push(CheckError::LockedPackApartWall(4, 5));
-    errors.push(CheckError::Locked4Packs(7, 7));
+    errors.push(CheckError::Locked2x2Block(7, 7));
     println!("SokHello! {}x", errors)
 }
