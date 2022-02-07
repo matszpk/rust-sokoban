@@ -243,8 +243,6 @@ impl<'a> Level<'a> {
         let mut filled = vec![false; self.width*self.height];
         let mut stk = vec![StackItem{x: px, y: py, d:Left}];
         
-        let mut target_count = 0;
-        let mut pack_count = 0;
         let mut touch_frames = false;
         
         while stk.len() != 0 {
@@ -254,12 +252,6 @@ impl<'a> Level<'a> {
                     stk.pop();  // if wall or already filled
                 } else {
                     // fill this field
-                    if self.area[it.y*self.width + it.x].is_target() {
-                        target_count+=1;
-                    }
-                    if self.area[it.y*self.width + it.x].is_pack() {
-                        pack_count+=1;
-                    }
                     filled[it.y*self.width + it.x] = true;
                     // get next position
                     let next_pos = match it.d {
@@ -310,11 +302,6 @@ impl<'a> Level<'a> {
             }
         }
         
-        if target_count < pack_count {
-            errors.push(TooFewTargets(pack_count));
-        } else if target_count < pack_count {
-            errors.push(TooFewTargets(target_count));
-        }
         if touch_frames {
             errors.push(LevelOpen);
         }
@@ -505,6 +492,72 @@ mod test {
              #      # \
               ###### ")?;
         assert_eq!(Ok(()), levelb.check());
+        
+        let levelb = Level::from_string("git", 8, 6,
+            " ### ## \
+             #      #\
+             #@  ...#\
+             #   $$$#\
+             #      # \
+              ###### ")?;
+        let mut errors = CheckErrors::new();
+        errors.push(LevelOpen);
+        assert_eq!(Err(errors), levelb.check());
+        
+        let levelb = Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             #   ...#\
+             #   $$$#\
+             #      # \
+              ###### ")?;
+        let mut errors = CheckErrors::new();
+        errors.push(NoPlayer);
+        assert_eq!(Err(errors), levelb.check());
+        
+        let levelb = Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             #@  +..#\
+             #   $$$#\
+             #      # \
+              ###### ")?;
+        let mut errors = CheckErrors::new();
+        errors.push(TooManyPlayers);
+        assert_eq!(Err(errors), levelb.check());
+        
+        let levelb = Level::from_string("git", 8, 6,
+            " ###### \
+             #  @   #\
+             #@  ...#\
+             #   $$$#\
+             #      # \
+              ###### ")?;
+        let mut errors = CheckErrors::new();
+        errors.push(TooManyPlayers);
+        assert_eq!(Err(errors), levelb.check());
+        
+        let levelb = Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             #@  .. #\
+             #   $$$#\
+             #      # \
+              ###### ")?;
+        let mut errors = CheckErrors::new();
+        errors.push(TooFewTargets(3));
+        assert_eq!(Err(errors), levelb.check());
+        
+        let levelb = Level::from_string("git", 8, 6,
+            " ###### \
+             #     .#\
+             #@  ...#\
+             #   $$ #\
+             #      # \
+              ###### ")?;
+        let mut errors = CheckErrors::new();
+        errors.push(TooFewPacks(4));
+        assert_eq!(Err(errors), levelb.check());
         Ok(())
     }
 }
