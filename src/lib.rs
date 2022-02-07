@@ -227,7 +227,7 @@ impl<'a> Level<'a> {
         Err(EmptyLines)
     }
     
-    fn check_level_by_fill(&self) -> bool {
+    fn check_level_by_fill(&self, errors: &mut CheckErrors) {
         struct StackItem{ x: usize, y: usize, d: Direction, }
         // find player
         if let Some(pp) = self.area.iter().position(|x| x.is_player()) {
@@ -236,8 +236,11 @@ impl<'a> Level<'a> {
             //
             let mut filled = vec![false; self.width*self.height];
             let mut stk = vec![StackItem{x,y,d:Left}];
+            
             let mut target_count = 0;
             let mut pack_count = 0;
+            let mut touch_frames = false;
+            
             while stk.len() != 0 {
                 if let Some(it) = stk.last_mut() {
                     if self.area[it.y*self.width + it.x] == Wall ||
@@ -258,25 +261,37 @@ impl<'a> Level<'a> {
                                 it.d = Right;
                                 if it.x > 0 {
                                     Some((it.x-1, it.y))
-                                } else { None }
+                                } else {
+                                    touch_frames = true;
+                                    None
+                                }
                             },
                             Right => {
                                 it.d = Down;
                                 if it.x+1 < self.width {
                                     Some((it.x+1, it.y))
-                                } else { None }
+                                } else {
+                                    touch_frames = true;
+                                    None
+                                }
                             }
                             Down => {
                                 it.d = Up;
                                 if it.y > 0 {
                                     Some((it.x, it.y-1))
-                                } else { None }
+                                } else {
+                                    touch_frames = true;
+                                    None
+                                }
                             }
                             Up => {
                                 it.d = NoDirection;
                                 if it.y+1 < self.height {
                                     Some((it.x, it.y+1))
-                                } else { None }
+                                } else {
+                                    touch_frames = true;
+                                    None
+                                }
                             }
                             _ => { None }
                         };
@@ -288,8 +303,20 @@ impl<'a> Level<'a> {
                     }
                 }
             }
+            
+            if target_count < pack_count {
+                errors.push(TooFewTargets(pack_count));
+            } else if target_count < pack_count {
+                errors.push(TooFewTargets(target_count));
+            }
+            if touch_frames {
+                errors.push(LevelOpen);
+            }
         }
-        false
+    }
+    
+    fn check_level_by_traverse(&self, errors: &mut CheckErrors) {
+        
     }
     
     /// Check level.
