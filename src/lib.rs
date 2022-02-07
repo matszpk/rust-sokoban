@@ -373,20 +373,16 @@ impl<'a> Level<'a> {
         }
         for iy in 1..self.height-1 {
             for ix in 1..self.width-1 {
-                let field_ul = self.area[(iy-1)*self.width + ix-1];
                 let field_u = self.area[(iy-1)*self.width + ix];
-                let field_ur = self.area[(iy-1)*self.width + ix+1];
                 let field_l = self.area[iy*self.width + ix-1];
                 let field = self.area[iy*self.width + ix];
                 let field_r = self.area[iy*self.width + ix+1];
-                let field_dl = self.area[(iy+1)*self.width + ix-1];
                 let field_d = self.area[(iy+1)*self.width + ix];
-                let field_dr = self.area[(iy+1)*self.width + ix+1];
                 if field == Pack {
-                    if (field_u == Wall && field_l == Wall && field_r == Wall) ||
-                        (field_d == Wall && field_l == Wall && field_r == Wall) ||
-                        (field_l == Wall && field_u == Wall && field_d == Wall) ||
-                        (field_r == Wall && field_u == Wall && field_d == Wall) {
+                    if (field_u == Wall && (field_l == Wall || field_r == Wall)) ||
+                        (field_d == Wall && (field_l == Wall || field_r == Wall)) ||
+                        (field_l == Wall && (field_u == Wall || field_d == Wall)) ||
+                        (field_r == Wall && (field_u == Wall || field_d == Wall)) {
                         errors.push(LockedPackApartWall(ix, iy));
                     }
                 }
