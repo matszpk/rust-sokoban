@@ -398,13 +398,24 @@ impl<'a> Level<'a> {
     
     /// Check level is done.
     pub fn is_done(&self) -> bool {
-        false
+        let packs_num = self.area.iter().filter(|x| x.is_pack()).count();
+        let targets_num = self.area.iter().filter(|x| x.is_target()).count();
+        let packs_on_targets_num = self.area.iter().filter(
+                    |x| **x == PackOnTarget).count();
+        packs_num == packs_on_targets_num && targets_num == packs_on_targets_num
     }
     
     /// Make move if possible. Return 2 booleans.
     /// The first boolean indicates that move has been done.
     /// The second boolean indicates that move push pack.
     pub fn make_move(&mut self, dir: Direction) -> (bool, bool) {
+        match dir {
+            Left|PushLeft => {},
+            Right|PushRight => {},
+            Up|PushUp => {},
+            Down|PushDown => {},
+            NoDirection => {},
+        }
         (true, true)
     }
     
