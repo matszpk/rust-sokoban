@@ -1058,6 +1058,43 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![PushDown] },
             lstate);
+        
+        // pushes from/to target
+        let level = Level::from_string("git", 8, 7,
+            " ###### \
+             # ..   #\
+             #  .$  #\
+             # .$@$ #\
+             #   $  #\
+             #      # \
+              ###### ").unwrap();
+        let mut lstate = LevelState::new(&level).unwrap();
+        assert_eq!((true, true), lstate.make_move(Left));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 3, player_y: 3,
+            area: Level::from_string("git", 8, 7,
+            " ###### \
+             # ..   #\
+             #  .$  #\
+             # *@ $ #\
+             #   $  #\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![PushLeft] },
+            lstate);
+        assert_eq!((true, true), lstate.make_move(Left));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 2, player_y: 3,
+            area: Level::from_string("git", 8, 7,
+            " ###### \
+             # ..   #\
+             #  .$  #\
+             #$+  $ #\
+             #   $  #\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![PushLeft, PushLeft] },
+            lstate);
     }
 }
 
