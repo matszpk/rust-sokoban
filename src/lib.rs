@@ -429,7 +429,8 @@ impl Level {
 }
 
 
-struct LevelState<'a> {
+/// LevelState is state game in given level.
+pub struct LevelState<'a> {
     level: &'a Level,
     player_x: usize,
     player_y: usize,
@@ -438,6 +439,7 @@ struct LevelState<'a> {
 }
 
 impl<'a> LevelState<'a> {
+    /// Create new level state from level.
     pub fn new(level: &'a Level) -> Result<LevelState<'a>, CheckError> {
         if let Some(pp) = level.area.iter().position(|x| x.is_player()) {
             let player_x = pp % level.width();
@@ -584,7 +586,6 @@ impl<'a> LevelState<'a> {
                 }
                 NoDirection => {
                     panic!("Unknown direction");
-                    (0, None, 0, 0)
                 }
             };
             
