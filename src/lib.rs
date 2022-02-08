@@ -468,6 +468,10 @@ impl<'a> LevelState<'a> {
     pub fn player_y(&self) -> usize {
         self.player_y
     }
+    /// Return current area.
+    pub fn area(&self) -> &Vec<Field> {
+        &self.area
+    }
     
     /// Reset level state to original state - undo all moves.
     pub fn reset(&mut self) {
@@ -988,7 +992,7 @@ mod test {
         assert_eq!(true, lstate2.undo_move());
         assert_eq!(old_lstate, lstate2);
         // move to target
-        let mut old_lstate = lstate.clone();
+        let old_lstate = lstate.clone();
         assert_eq!((true, false), lstate.make_move(Right));
         assert_eq!(LevelState{ level: &level,
             player_x: 2, player_y: 2,
@@ -1330,6 +1334,43 @@ mod test {
             area:level.area().clone(),
             moves: vec![] },
             lstate);
+    }
+    
+    #[test]
+    fn test_reset() {
+        let level = Level::from_string("git", 8, 7,
+            " ###### \
+             # ..   #\
+             #  .$  #\
+             # .$@$ #\
+             #   $  #\
+             #      # \
+              ###### ").unwrap();
+        let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
+        assert_eq!((true, true), lstate.make_move(Left));
+        assert_eq!((true, true), lstate.make_move(Left));
+        lstate.reset();
+        assert_eq!(old_lstate, lstate);
+    }
+    
+    #[test]
+    fn test_is_done() {
+        let level = Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             #@  ...#\
+             #   $$$#\
+             #      # \
+              ###### ").unwrap();
+        let mut lstate = LevelState::new(&level).unwrap();
+        for m in vec![Down, Down, Right, Right, Right,
+                    Up, Down,Right, Up, Down, Right, Up] {
+            assert_eq!(false, lstate.is_done());
+            lstate.make_move(m);
+            println!("lstate:{:?}", lstate.area());
+        }
+        assert_eq!(true, lstate.is_done());
     }
 }
 
