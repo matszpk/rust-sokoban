@@ -448,7 +448,7 @@ impl<'a> LevelState<'a> {
             Err(NoPlayer)
         }
     }
-
+    
     /// Reset level state to original state - undo all moves.
     pub fn reset(&mut self) {
         if let Some(pp) = self.level.area().iter().position(|x| x.is_player()) {
@@ -547,7 +547,58 @@ impl<'a> LevelState<'a> {
     
     /// Undo move. Return true if move undone.
     pub fn undo_move(&mut self) -> bool {
-        false
+        if let Some(dir) = self.moves.pop() {
+            let width = self.level.width();
+            let height = self.level.height();
+            let this_pos = self.player_y*width + self.player_x;
+            
+            
+            let (prev_pos, pprev2_pos, old_x, old_y) = match dir {
+                Right|PushRight => {
+                    if self.player_x>0 || (dir == PushRight && self.player_x>1) {
+                        panic!("Unexpected frame"); }
+                    let prev2_pos = if dir == PushRight
+                        { Some(this_pos-2) } else { None };
+                    (this_pos-1, prev2_pos, self.player_x-1, self.player_y)
+                }
+                Left|PushLeft => {
+                    if self.player_x<width-1 || (dir == PushLeft && self.player_x<width-2) {
+                        panic!("Unexpected frame"); }
+                    let prev2_pos = if dir == PushLeft
+                        { Some(this_pos+2) } else { None };
+                    (this_pos+1, prev2_pos, self.player_x+1, self.player_y)
+                }
+                Down|PushDown => {
+                    if self.player_y>0 || (dir == PushDown && self.player_y>1) {
+                        panic!("Unexpected frame"); }
+                    let prev2_pos = if dir == PushDown
+                        { Some(this_pos-2*width) } else { None };
+                    (this_pos-width, prev2_pos, self.player_x, self.player_y-1)
+                }
+                Up|PushUp => {
+                    if self.player_y<height-1 || (dir == PushUp && self.player_y<height-2) {
+                        panic!("Unexpected frame"); }
+                    let prev2_pos = if dir == PushUp
+                        { Some(this_pos+2*width) } else { None };
+                    (this_pos+width, prev2_pos, self.player_x, self.player_y+1)
+                }
+                NoDirection => {
+                    panic!("Unknown direction");
+                    (0, None, 0, 0)
+                }
+            };
+            
+            self.area[this_pos].set_player();
+            if let Some(prev2_pos) = pprev2_pos {
+                self.area[prev_pos].set_pack();
+                self.area[prev2_pos].unset_pack();
+            } else {
+                self.area[prev_pos].unset_player();
+            }
+            self.player_x = old_x;
+            self.player_y = old_y;
+            true
+        } else { false }
     }
     
     /// Get all moves.
