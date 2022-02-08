@@ -18,6 +18,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 use std::io;
+use std::path;
 use std::fmt;
 use int_enum::IntEnum;
 
@@ -623,6 +624,31 @@ impl<'a> LevelState<'a> {
     /// Get all moves.
     pub fn moves(&self) -> &Vec<Direction> {
         &self.moves
+    }
+}
+
+/// Level set. Contains levels and name of the level set.
+pub struct LevelSet {
+    name: String,
+    levels: Vec<Level>,
+}
+
+impl LevelSet {
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+    pub fn levels(&self) -> &Vec<Level> {
+        &self.levels
+    }
+    
+    pub fn from_str(str: &str) -> Result<LevelSet, ParseError> {
+        Ok(LevelSet{name:"".to_string(), levels: vec![]})
+    }
+    pub fn from_file<P: AsRef<path::Path>>(path: P) -> Result<LevelSet, ParseError> {
+        Ok(LevelSet{name:"".to_string(), levels: vec![]})
+    }
+    pub fn from_reader<B: io::BufRead>(reader: B) -> Result<LevelSet, ParseError> {
+        Ok(LevelSet{name:"".to_string(), levels: vec![]})
     }
 }
 
