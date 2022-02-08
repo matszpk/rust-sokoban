@@ -429,7 +429,8 @@ impl Level {
 }
 
 
-/// LevelState is state game in given level.
+/// LevelState is state game in given a level. A level state contains changed
+/// an area of a level after moves. Initially an area is copied from level.
 pub struct LevelState<'a> {
     level: &'a Level,
     player_x: usize,
