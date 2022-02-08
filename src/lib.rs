@@ -526,13 +526,16 @@ impl<'a> LevelState<'a> {
                 }
                 Pack|PackOnTarget => {
                     if let Some(next2_pos) = pnext2_pos {
-                        self.area[next2_pos].set_pack();
-                        self.area[next_pos].set_player();
-                        self.area[this_pos].unset_player();
-                        self.player_x = new_x;
-                        self.player_y = new_y;
-                        self.moves.push(push_dir);
-                        (true, true)
+                        if self.area[next2_pos] != Wall &&
+                            self.area[next2_pos].is_pack() {
+                            self.area[next2_pos].set_pack();
+                            self.area[next_pos].set_player();
+                            self.area[this_pos].unset_player();
+                            self.player_x = new_x;
+                            self.player_y = new_y;
+                            self.moves.push(push_dir);
+                            (true, true)
+                        } else { (false, false) }
                     } else {
                         (false, false)
                     }
