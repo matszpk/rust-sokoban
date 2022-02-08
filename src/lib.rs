@@ -103,6 +103,32 @@ impl Field {
     pub fn is_target(self) -> bool {
         self == Target || self == PackOnTarget || self == PlayerOnTarget
     }
+    pub fn set_player(&mut self) {
+        match *self {
+            Target|PackOnTarget => *self = PlayerOnTarget,
+            _ => *self = Player,
+        }
+    }
+    pub fn unset_player(&mut self) {
+        match *self {
+            Player => *self = Empty,
+            PlayerOnTarget => *self = Target,
+            _ => panic!("Invalid field"),
+        }
+    }
+    pub fn set_pack(&mut self) {
+        match *self {
+            Target|PlayerOnTarget => *self = PackOnTarget,
+            _ => *self = Pack,
+        }
+    }
+    pub fn unset_pack(&mut self) {
+        match *self {
+            Pack => *self = Empty,
+            PackOnTarget => *self = Target,
+            _ => panic!("Invalid field"),
+        }
+    }
 }
 
 impl fmt::Display for CheckError {
@@ -177,7 +203,6 @@ pub struct Level {
     width: usize,
     height: usize,
     area: Vec<Field>,
-    moves: Vec<Direction>,
 }
 
 fn char_to_field(x: char) -> Field {
@@ -219,7 +244,7 @@ impl Level {
     pub fn new(name: &str, width: usize, height: usize, area: Vec<Field>)
                     -> Result<Level, ParseError> {
         if area.len() == width*height {
-            Ok(Level{ name: String::from(name), width, height, area, moves: vec!() })
+            Ok(Level{ name: String::from(name), width, height, area })
         } else {
             Err(WrongSize(width, height))
         }
@@ -237,7 +262,7 @@ impl Level {
             return Err(WrongField(pp%width, pp/width));
         }
         let area: Vec<Field> = chrs2.map(char_to_field).collect();
-        Ok(Level{ name: String::from(name), width, height, area: area, moves: vec!() })
+        Ok(Level{ name: String::from(name), width, height, area: area })
     }
     
     /// Parse level from lines.
@@ -401,9 +426,39 @@ impl Level {
             Err(errors)
         } else { Ok(()) }
     }
-    
+}
+
+
+struct LevelState<'a> {
+    level: &'a Level,
+    player_x: usize,
+    player_y: usize,
+    area: Vec<Field>,
+    moves: Vec<Direction>,
+}
+
+impl<'a> LevelState<'a> {
+    pub fn new(level: &'a Level) -> Result<LevelState<'a>, CheckError> {
+        if let Some(pp) = level.area.iter().position(|x| x.is_player()) {
+            let player_x = pp % level.width();
+            let player_y = pp / level.width();
+            Ok(LevelState{ level, player_x, player_y, area: level.area().clone(),
+                    moves: vec!() })
+        } else {
+            Err(NoPlayer)
+        }
+    }
+
     /// Reset level state to original state - undo all moves.
     pub fn reset(&mut self) {
+        if let Some(pp) = self.level.area().iter().position(|x| x.is_player()) {
+            self.moves = vec!();
+            self.player_x = pp % self.level.width();
+            self.player_y = pp / self.level.width();
+            self.area.copy_from_slice(self.level.area());
+        } else {
+            panic!("No player!");
+        }
     }
     
     /// Check level is done.
@@ -419,14 +474,41 @@ impl Level {
     /// The first boolean indicates that move has been done.
     /// The second boolean indicates that move push pack.
     pub fn make_move(&mut self, dir: Direction) -> (bool, bool) {
+        let width = self.level.width();
+        let this_pos = self.player_y*width + self.player_x;
         match dir {
-            Left|PushLeft => {},
-            Right|PushRight => {},
-            Up|PushUp => {},
-            Down|PushDown => {},
-            NoDirection => {},
+            Left|PushLeft => {
+                if self.player_x > 0 {
+                    let next_pos = this_pos - 1;
+                    // check whether if wall
+                    match self.area[next_pos] {
+                        Empty => {
+                            self.area[next_pos].set_player();
+                            self.area[this_pos].unset_player();
+                            self.player_x-=1;
+                            self.moves.push(Left);
+                            (true, false)
+                        }
+                        Pack|PackOnTarget => {
+                            if self.player_x <= 1 {
+                                return (false, false);
+                            }
+                            self.area[next_pos-1].set_pack();
+                            self.area[next_pos].set_player();
+                            self.area[this_pos].unset_player();
+                            self.moves.push(PushLeft);
+                            (true, true)
+                        }
+                        Wall => (false, false),
+                        _ => (false, false)
+                    }
+                } else { (false, false) }
+            },
+            Right|PushRight => (false, false),
+            Up|PushUp => (false, false),
+            Down|PushDown => (false, false),
+            NoDirection => (false, false),
         }
-        (true, true)
     }
     
     /// Undo move. Return true if move undone.
