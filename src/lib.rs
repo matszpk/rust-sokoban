@@ -438,7 +438,7 @@ impl Level {
 
 /// LevelState is state game in given a level. A level state contains changed
 /// an area of a level after moves. Initially an area is copied from level.
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq,Debug,Clone)]
 pub struct LevelState<'a> {
     level: &'a Level,
     player_x: usize,
@@ -573,48 +573,43 @@ impl<'a> LevelState<'a> {
             let height = self.level.height();
             let this_pos = self.player_y*width + self.player_x;
             
-            
-            let (prev_pos, pprev2_pos, old_x, old_y) = match dir {
+            let (prev_pos, pnext_pos, old_x, old_y) = match dir {
                 Right|PushRight => {
-                    if self.player_x>0 || (dir == PushRight && self.player_x>1) {
-                        panic!("Unexpected frame"); }
-                    let prev2_pos = if dir == PushRight
-                        { Some(this_pos-2) } else { None };
-                    (this_pos-1, prev2_pos, self.player_x-1, self.player_y)
+                    if self.player_x==0 { panic!("Unexpected frame"); }
+                    let next_pos = if dir == PushRight
+                        { Some(this_pos+1) } else { None };
+                    (this_pos-1, next_pos, self.player_x-1, self.player_y)
                 }
                 Left|PushLeft => {
-                    if self.player_x<width-1 || (dir == PushLeft && self.player_x<width-2) {
-                        panic!("Unexpected frame"); }
-                    let prev2_pos = if dir == PushLeft
-                        { Some(this_pos+2) } else { None };
-                    (this_pos+1, prev2_pos, self.player_x+1, self.player_y)
+                    if self.player_x>=width-1 { panic!("Unexpected frame"); }
+                    let next_pos = if dir == PushLeft
+                        { Some(this_pos-1) } else { None };
+                    (this_pos+1, next_pos, self.player_x+1, self.player_y)
                 }
                 Down|PushDown => {
-                    if self.player_y>0 || (dir == PushDown && self.player_y>1) {
-                        panic!("Unexpected frame"); }
-                    let prev2_pos = if dir == PushDown
-                        { Some(this_pos-2*width) } else { None };
-                    (this_pos-width, prev2_pos, self.player_x, self.player_y-1)
+                    if self.player_y==0 { panic!("Unexpected frame"); }
+                    let next_pos = if dir == PushDown
+                        { Some(this_pos+width) } else { None };
+                    (this_pos-width, next_pos, self.player_x, self.player_y-1)
                 }
                 Up|PushUp => {
-                    if self.player_y<height-1 || (dir == PushUp && self.player_y<height-2) {
-                        panic!("Unexpected frame"); }
-                    let prev2_pos = if dir == PushUp
-                        { Some(this_pos+2*width) } else { None };
-                    (this_pos+width, prev2_pos, self.player_x, self.player_y+1)
+                    if self.player_y>=height-1 { panic!("Unexpected frame"); }
+                    let next_pos = if dir == PushUp
+                        { Some(this_pos-width) } else { None };
+                    (this_pos+width, next_pos, self.player_x, self.player_y+1)
                 }
                 NoDirection => {
                     panic!("Unknown direction");
                 }
             };
             
-            self.area[this_pos].set_player();
-            if let Some(prev2_pos) = pprev2_pos {
-                self.area[prev_pos].set_pack();
-                self.area[prev2_pos].unset_pack();
+            if let Some(next_pos) = pnext_pos {
+                self.area[next_pos].unset_pack();
+                self.area[this_pos].set_pack();
             } else {
-                self.area[prev_pos].unset_player();
+                self.area[this_pos].unset_player();
             }
+            self.area[prev_pos].set_player();
             self.player_x = old_x;
             self.player_y = old_y;
             true
@@ -889,7 +884,7 @@ mod test {
     }
     
     #[test]
-    fn test_make_move() {
+    fn test_make_move_and_undo_move() {
         let level = Level::from_string("git", 8, 6,
             " ###### \
              #      #\
@@ -899,6 +894,7 @@ mod test {
               ###### ").unwrap();
         
         let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
         assert_eq!((true, false), lstate.make_move(Left));
         assert_eq!(LevelState{ level: &level,
             player_x: 1, player_y: 2,
@@ -911,8 +907,11 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![Left] },
             lstate);
+        assert_eq!(true, lstate.undo_move());
+        assert_eq!(old_lstate, lstate);
         
         let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
         assert_eq!((true, false), lstate.make_move(Right));
         assert_eq!(LevelState{ level: &level,
             player_x: 3, player_y: 2,
@@ -925,8 +924,11 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![Right] },
             lstate);
+        assert_eq!(true, lstate.undo_move());
+        assert_eq!(old_lstate, lstate);
         
         let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
         assert_eq!((true, false), lstate.make_move(Up));
         assert_eq!(LevelState{ level: &level,
             player_x: 2, player_y: 1,
@@ -939,8 +941,11 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![Up] },
             lstate);
+        assert_eq!(true, lstate.undo_move());
+        assert_eq!(old_lstate, lstate);
         
         let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
         assert_eq!((true, false), lstate.make_move(Down));
         assert_eq!(LevelState{ level: &level,
             player_x: 2, player_y: 3,
@@ -953,6 +958,8 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![Down] },
             lstate);
+        assert_eq!(true, lstate.undo_move());
+        assert_eq!(old_lstate, lstate);
         
         // move from target
         let level = Level::from_string("git", 8, 6,
@@ -964,6 +971,7 @@ mod test {
               ###### ").unwrap();
         
         let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
         assert_eq!((true, false), lstate.make_move(Left));
         assert_eq!(LevelState{ level: &level,
             player_x: 1, player_y: 2,
@@ -976,7 +984,11 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![Left] },
             lstate);
+        let mut lstate2 = lstate.clone();
+        assert_eq!(true, lstate2.undo_move());
+        assert_eq!(old_lstate, lstate2);
         // move to target
+        let mut old_lstate = lstate.clone();
         assert_eq!((true, false), lstate.make_move(Right));
         assert_eq!(LevelState{ level: &level,
             player_x: 2, player_y: 2,
@@ -989,6 +1001,8 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![Left,Right] },
             lstate);
+        assert_eq!(true, lstate.undo_move());
+        assert_eq!(old_lstate, lstate);
         
         // move failures
         let level = Level::from_string("git", 8, 6,
