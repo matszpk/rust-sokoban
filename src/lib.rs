@@ -685,14 +685,14 @@ mod test {
     }
     
     #[test]
-    fn test_check() -> Result<(), ParseError> {
+    fn test_check() {
         let level = Level::from_string("git", 8, 6,
             " ###### \
              #      #\
              #@  ...#\
              #   $$$#\
              #      # \
-              ###### ")?;
+              ###### ").unwrap();
         assert_eq!(Ok(()), level.check());
         
         let level = Level::from_string("git", 11, 6,
@@ -701,7 +701,7 @@ mod test {
              #@  ...#**#\
              #   $$$### \
              #      #    \
-              ######    ")?;
+              ######    ").unwrap();
         assert_eq!(Ok(()), level.check());
         
         let level = Level::from_string("git", 8, 6,
@@ -710,7 +710,7 @@ mod test {
              #@  .*.#\
              #   $ $#\
              #      # \
-              ###### ")?;
+              ###### ").unwrap();
         assert_eq!(Ok(()), level.check());
         
         let level = Level::from_string("git", 8, 6,
@@ -719,7 +719,7 @@ mod test {
              #@  ...#\
              #   $$$#\
              #      # \
-              ###### ")?;
+              ###### ").unwrap();
         let mut errors = CheckErrors::new();
         errors.push(LevelOpen);
         assert_eq!(Err(errors), level.check());
@@ -730,7 +730,7 @@ mod test {
              #   ...#\
              #   $$$#\
              #      # \
-              ###### ")?;
+              ###### ").unwrap();
         let mut errors = CheckErrors::new();
         errors.push(NoPlayer);
         assert_eq!(Err(errors), level.check());
@@ -741,7 +741,7 @@ mod test {
              #@  +..#\
              #   $$$#\
              #      # \
-              ###### ")?;
+              ###### ").unwrap();
         let mut errors = CheckErrors::new();
         errors.push(TooManyPlayers);
         assert_eq!(Err(errors), level.check());
@@ -752,7 +752,7 @@ mod test {
              #@  ...#\
              #   $$$#\
              #      # \
-              ###### ")?;
+              ###### ").unwrap();
         let mut errors = CheckErrors::new();
         errors.push(TooManyPlayers);
         assert_eq!(Err(errors), level.check());
@@ -763,7 +763,7 @@ mod test {
              #@  .. #\
              #   $$$#\
              #      # \
-              ###### ")?;
+              ###### ").unwrap();
         let mut errors = CheckErrors::new();
         errors.push(TooFewTargets(3));
         assert_eq!(Err(errors), level.check());
@@ -774,7 +774,7 @@ mod test {
              #@  ...#\
              #   $$ #\
              #      # \
-              ###### ")?;
+              ###### ").unwrap();
         let mut errors = CheckErrors::new();
         errors.push(TooFewPacks(4));
         assert_eq!(Err(errors), level.check());
@@ -786,7 +786,7 @@ mod test {
              #@  ...#$$#\
              #   $$$### \
              #      #    \
-              ######    ")?;
+              ######    ").unwrap();
         let mut errors = CheckErrors::new();
         errors.push(PackNotAvailable(8, 2));
         errors.push(PackNotAvailable(9, 2));
@@ -805,7 +805,7 @@ mod test {
              #@  $$.#\
              #   $$ #\
              #      # \
-              ###### ")?;
+              ###### ").unwrap();
         let mut errors = CheckErrors::new();
         errors.push(Locked2x2Block(4, 2));
         assert_eq!(Err(errors), level.check());
@@ -816,7 +816,7 @@ mod test {
              #@  **.#\
              #   *$ #\
              #      # \
-              ###### ")?;
+              ###### ").unwrap();
         let mut errors = CheckErrors::new();
         errors.push(Locked2x2Block(4, 2));
         assert_eq!(Err(errors), level.check());
@@ -827,7 +827,7 @@ mod test {
              #@  ** #\
              #   ** #\
              #   $ .# \
-              ###### ")?;
+              ###### ").unwrap();
         assert_eq!(Ok(()), level.check());
         
         let level = Level::from_string("git", 8, 6,
@@ -836,7 +836,7 @@ mod test {
              #@    .#\
              #      #\
              #$    $# \
-              ###### ")?;
+              ###### ").unwrap();
         let mut errors = CheckErrors::new();
         errors.push(LockedPackApartWalls(1, 1));
         errors.push(LockedPackApartWalls(1, 4));
@@ -852,7 +852,7 @@ mod test {
              #  *$$.  #\
              #@ *.*.  #\
              ####   ###   \
-                #####  ")?;
+                #####  ").unwrap();
         assert_eq!(Ok(()), level.check());
         
         // some original level
@@ -872,10 +872,8 @@ mod test {
              ##$########$#   ...#\
              #    .*  #    ##.#.#\
              # .*...*   $  .....#\
-             ####################")?;
+             ####################").unwrap();
         assert_eq!(Ok(()), level.check());
-        
-        Ok(())
     }
 }
 
