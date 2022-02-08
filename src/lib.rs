@@ -529,6 +529,8 @@ impl<'a> LevelState<'a> {
                         self.area[next2_pos].set_pack();
                         self.area[next_pos].set_player();
                         self.area[this_pos].unset_player();
+                        self.player_x = new_x;
+                        self.player_y = new_y;
                         self.moves.push(push_dir);
                         (true, true)
                     } else {
