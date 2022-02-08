@@ -527,7 +527,7 @@ impl<'a> LevelState<'a> {
                 Pack|PackOnTarget => {
                     if let Some(next2_pos) = pnext2_pos {
                         if self.area[next2_pos] != Wall &&
-                            self.area[next2_pos].is_pack() {
+                            !self.area[next2_pos].is_pack() {
                             self.area[next2_pos].set_pack();
                             self.area[next_pos].set_player();
                             self.area[this_pos].unset_player();
