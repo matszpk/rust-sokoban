@@ -451,6 +451,15 @@ impl<'a> LevelState<'a> {
         }
     }
     
+    /// Return player X position.
+    pub fn player_x(&self) -> usize {
+        self.player_x
+    }
+    /// Return player Y position.
+    pub fn player_y(&self) -> usize {
+        self.player_y
+    }
+    
     /// Reset level state to original state - undo all moves.
     pub fn reset(&mut self) {
         if let Some(pp) = self.level.area().iter().position(|x| x.is_player()) {
