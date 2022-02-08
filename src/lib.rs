@@ -64,7 +64,7 @@ pub enum Field {
     PlayerOnTarget = 6,
 }
 
-#[derive(PartialEq)]
+#[derive(Debug,PartialEq)]
 /// Check level error.
 pub enum CheckError {
     /// No player.
@@ -94,21 +94,26 @@ use Direction::*;
 use CheckError::*;
 
 impl Field {
+    /// Return true if is player in this field.
     pub fn is_player(self) -> bool {
         self == Player || self == PlayerOnTarget
     }
+    /// Return true if is pack in this field.
     pub fn is_pack(self) -> bool {
         self == Pack || self == PackOnTarget
     }
+    /// Return true if is target in this field.
     pub fn is_target(self) -> bool {
         self == Target || self == PackOnTarget || self == PlayerOnTarget
     }
+    /// Set player in this field even if this field contains other object.
     pub fn set_player(&mut self) {
         match *self {
             Target|PackOnTarget => *self = PlayerOnTarget,
             _ => *self = Player,
         }
     }
+    /// Unset player in this field.
     pub fn unset_player(&mut self) {
         match *self {
             Player => *self = Empty,
@@ -116,12 +121,14 @@ impl Field {
             _ => panic!("Invalid field"),
         }
     }
+    /// Set pack in this field even if this field contains other object.
     pub fn set_pack(&mut self) {
         match *self {
             Target|PlayerOnTarget => *self = PackOnTarget,
             _ => *self = Pack,
         }
     }
+    /// Unset pack in this field.
     pub fn unset_pack(&mut self) {
         match *self {
             Pack => *self = Empty,
@@ -431,6 +438,7 @@ impl Level {
 
 /// LevelState is state game in given a level. A level state contains changed
 /// an area of a level after moves. Initially an area is copied from level.
+#[derive(PartialEq,Debug)]
 pub struct LevelState<'a> {
     level: &'a Level,
     player_x: usize,
@@ -489,6 +497,7 @@ impl<'a> LevelState<'a> {
         let width = self.level.width();
         let height = self.level.height();
         let this_pos = self.player_y*width + self.player_x;
+        // get some setup for direction. next positions, new player position and directions.
         let (pnext_pos, pnext2_pos, new_x, new_y, dir, push_dir) = match dir {
             Left|PushLeft => {
                 let pnext_pos = if self.player_x>0
@@ -629,7 +638,10 @@ mod test {
             Wall, Target, Pack, Player, Wall,
             Wall, Wall, Wall, Wall, Wall]);
         assert!(levela.is_ok());
-        let levelb = Level::from_string("blable", 5, 3, "######.$@######");
+        let levelb = Level::from_string("blable", 5, 3,
+            "#####\
+             #.$@#\
+             #####");
         assert_eq!(levela, levelb);
         
         let levela = Level::new("git", 8, 6, vec![
@@ -874,6 +886,178 @@ mod test {
              # .*...*   $  .....#\
              ####################").unwrap();
         assert_eq!(Ok(()), level.check());
+    }
+    
+    #[test]
+    fn test_make_move() {
+        let level = Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             # @ ...#\
+             #   $$$#\
+             #      # \
+              ###### ").unwrap();
+        
+        let mut lstate = LevelState::new(&level).unwrap();
+        assert_eq!((true, false), lstate.make_move(Left));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 1, player_y: 2,
+            area: Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             #@  ...#\
+             #   $$$#\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![Left] },
+            lstate);
+        
+        let mut lstate = LevelState::new(&level).unwrap();
+        assert_eq!((true, false), lstate.make_move(Right));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 3, player_y: 2,
+            area: Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             #  @...#\
+             #   $$$#\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![Right] },
+            lstate);
+        
+        let mut lstate = LevelState::new(&level).unwrap();
+        assert_eq!((true, false), lstate.make_move(Up));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 2, player_y: 1,
+            area: Level::from_string("git", 8, 6,
+            " ###### \
+             # @    #\
+             #   ...#\
+             #   $$$#\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![Up] },
+            lstate);
+        
+        let mut lstate = LevelState::new(&level).unwrap();
+        assert_eq!((true, false), lstate.make_move(Down));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 2, player_y: 3,
+            area: Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             #   ...#\
+             # @ $$$#\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![Down] },
+            lstate);
+        
+        // move from target
+        let level = Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             # +  ..#\
+             #   $$$#\
+             #      # \
+              ###### ").unwrap();
+        
+        let mut lstate = LevelState::new(&level).unwrap();
+        assert_eq!((true, false), lstate.make_move(Left));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 1, player_y: 2,
+            area: Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             #@.  ..#\
+             #   $$$#\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![Left] },
+            lstate);
+        // move to target
+        assert_eq!((true, false), lstate.make_move(Right));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 2, player_y: 2,
+            area: Level::from_string("git", 8, 6,
+            " ###### \
+             #      #\
+             # +  ..#\
+             #   $$$#\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![Left,Right] },
+            lstate);
+        
+        // pushes
+        let level = Level::from_string("git", 8, 7,
+            " ###### \
+             # ..   #\
+             # ..$  #\
+             #  $@$ #\
+             #   $  #\
+             #      # \
+              ###### ").unwrap();
+        let mut lstate = LevelState::new(&level).unwrap();
+        assert_eq!((true, true), lstate.make_move(Left));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 3, player_y: 3,
+            area: Level::from_string("git", 8, 7,
+            " ###### \
+             # ..   #\
+             # ..$  #\
+             # $@ $ #\
+             #   $  #\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![PushLeft] },
+            lstate);
+        
+        let mut lstate = LevelState::new(&level).unwrap();
+        assert_eq!((true, true), lstate.make_move(Right));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 5, player_y: 3,
+            area: Level::from_string("git", 8, 7,
+            " ###### \
+             # ..   #\
+             # ..$  #\
+             #  $ @$#\
+             #   $  #\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![PushRight] },
+            lstate);
+        
+        let mut lstate = LevelState::new(&level).unwrap();
+        assert_eq!((true, true), lstate.make_move(Up));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 4, player_y: 2,
+            area: Level::from_string("git", 8, 7,
+            " ###### \
+             # ..$  #\
+             # ..@  #\
+             #  $ $ #\
+             #   $  #\
+             #      # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![PushUp] },
+            lstate);
+        
+        let mut lstate = LevelState::new(&level).unwrap();
+        assert_eq!((true, true), lstate.make_move(Down));
+        assert_eq!(LevelState{ level: &level,
+            player_x: 4, player_y: 4,
+            area: Level::from_string("git", 8, 7,
+            " ###### \
+             # ..   #\
+             # ..$  #\
+             #  $ $ #\
+             #   @  #\
+             #   $  # \
+              ###### ").unwrap().area().clone(),
+            moves: vec![PushDown] },
+            lstate);
     }
 }
 
