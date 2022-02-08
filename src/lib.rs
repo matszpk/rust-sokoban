@@ -475,40 +475,69 @@ impl<'a> LevelState<'a> {
     /// The second boolean indicates that move push pack.
     pub fn make_move(&mut self, dir: Direction) -> (bool, bool) {
         let width = self.level.width();
+        let height = self.level.height();
         let this_pos = self.player_y*width + self.player_x;
-        match dir {
+        let (pnext_pos, pnext2_pos, new_x, new_y, dir, push_dir) = match dir {
             Left|PushLeft => {
-                if self.player_x > 0 {
-                    let next_pos = this_pos - 1;
-                    // check whether if wall
-                    match self.area[next_pos] {
-                        Empty => {
-                            self.area[next_pos].set_player();
-                            self.area[this_pos].unset_player();
-                            self.player_x-=1;
-                            self.moves.push(Left);
-                            (true, false)
-                        }
-                        Pack|PackOnTarget => {
-                            if self.player_x <= 1 {
-                                return (false, false);
-                            }
-                            self.area[next_pos-1].set_pack();
-                            self.area[next_pos].set_player();
-                            self.area[this_pos].unset_player();
-                            self.moves.push(PushLeft);
-                            (true, true)
-                        }
-                        Wall => (false, false),
-                        _ => (false, false)
+                let pnext_pos = if self.player_x>0
+                    { Some(this_pos-1) } else { None };
+                let pnext2_pos = if self.player_x>1
+                    { Some(this_pos-2) } else { None };
+                (pnext_pos, pnext2_pos,
+                self.player_x-1, self.player_y, Left, PushLeft)
+            }
+            Right|PushRight => {
+                let pnext_pos = if self.player_x<width-1
+                    { Some(this_pos+1) } else { None };
+                let pnext2_pos = if self.player_x<width-2
+                    { Some(this_pos+2) } else { None };
+                (pnext_pos, pnext2_pos,
+                self.player_x+1, self.player_y, Right, PushRight)
+            }
+            Up|PushUp => {
+                let pnext_pos = if self.player_y>0
+                    { Some(this_pos-width) } else { None };
+                let pnext2_pos = if self.player_y>1
+                    { Some(this_pos-2*width) } else { None };
+                (pnext_pos, pnext2_pos,
+                self.player_x, self.player_y-1, Up, PushUp)
+            }
+            Down|PushDown => {
+                let pnext_pos = if self.player_y<height-1
+                    { Some(this_pos+width) } else { None };
+                let pnext2_pos = if self.player_y<height-2
+                    { Some(this_pos+2*width) }else { None };
+                (pnext_pos, pnext2_pos,
+                self.player_x, self.player_y+1, Down, PushDown)
+            }
+            NoDirection => (None, None, 0, 0, NoDirection, NoDirection),
+        };
+        
+        if let Some(next_pos) = pnext_pos {
+            // check whether if wall
+            match self.area[next_pos] {
+                Empty|Target => {
+                    self.area[next_pos].set_player();
+                    self.area[this_pos].unset_player();
+                    self.player_x = new_x;
+                    self.player_y = new_y;
+                    self.moves.push(dir);
+                    (true, false)
+                }
+                Pack|PackOnTarget => {
+                    if let Some(next2_pos) = pnext2_pos {
+                        self.area[next2_pos].set_pack();
+                        self.area[next_pos].set_player();
+                        self.area[this_pos].unset_player();
+                        self.moves.push(push_dir);
+                        (true, true)
+                    } else {
+                        (false, false)
                     }
-                } else { (false, false) }
-            },
-            Right|PushRight => (false, false),
-            Up|PushUp => (false, false),
-            Down|PushDown => (false, false),
-            NoDirection => (false, false),
-        }
+                }
+                _ => (false, false)
+            }
+        } else { (false, false) }
     }
     
     /// Undo move. Return true if move undone.
