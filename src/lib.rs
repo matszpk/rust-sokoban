@@ -1368,7 +1368,6 @@ mod test {
                     Up, Down,Right, Up, Down, Right, Up] {
             assert_eq!(false, lstate.is_done());
             lstate.make_move(m);
-            println!("lstate:{:?}", lstate.area());
         }
         assert_eq!(true, lstate.is_done());
     }
