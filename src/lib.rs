@@ -1075,6 +1075,7 @@ mod test {
              #      # \
               ###### ").unwrap();
         let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
         assert_eq!((true, true), lstate.make_move(Left));
         assert_eq!(LevelState{ level: &level,
             player_x: 3, player_y: 3,
@@ -1088,8 +1089,11 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![PushLeft] },
             lstate);
+        assert_eq!(true, lstate.undo_move());
+        assert_eq!(old_lstate, lstate);
         
         let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
         assert_eq!((true, true), lstate.make_move(Right));
         assert_eq!(LevelState{ level: &level,
             player_x: 5, player_y: 3,
@@ -1103,8 +1107,11 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![PushRight] },
             lstate);
+        assert_eq!(true, lstate.undo_move());
+        assert_eq!(old_lstate, lstate);
         
         let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
         assert_eq!((true, true), lstate.make_move(Up));
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 2,
@@ -1118,8 +1125,11 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![PushUp] },
             lstate);
+        assert_eq!(true, lstate.undo_move());
+        assert_eq!(old_lstate, lstate);
         
         let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
         assert_eq!((true, true), lstate.make_move(Down));
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 4,
@@ -1133,6 +1143,8 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![PushDown] },
             lstate);
+        assert_eq!(true, lstate.undo_move());
+        assert_eq!(old_lstate, lstate);
         
         // pushes from/to target
         let level = Level::from_string("git", 8, 7,
@@ -1144,6 +1156,7 @@ mod test {
              #      # \
               ###### ").unwrap();
         let mut lstate = LevelState::new(&level).unwrap();
+        let old_lstate = lstate.clone();
         assert_eq!((true, true), lstate.make_move(Left));
         assert_eq!(LevelState{ level: &level,
             player_x: 3, player_y: 3,
@@ -1157,6 +1170,11 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![PushLeft] },
             lstate);
+        let mut lstate2 = lstate.clone();
+        assert_eq!(true, lstate2.undo_move());
+        assert_eq!(old_lstate, lstate2);
+        
+        let old_lstate = lstate.clone();
         assert_eq!((true, true), lstate.make_move(Left));
         assert_eq!(LevelState{ level: &level,
             player_x: 2, player_y: 3,
@@ -1170,6 +1188,8 @@ mod test {
               ###### ").unwrap().area().clone(),
             moves: vec![PushLeft, PushLeft] },
             lstate);
+        assert_eq!(true, lstate.undo_move());
+        assert_eq!(old_lstate, lstate);
         
         // pushes failures
         let level = Level::from_string("git", 8, 7,
