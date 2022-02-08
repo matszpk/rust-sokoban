@@ -485,7 +485,7 @@ impl<'a> LevelState<'a> {
         }
     }
     
-    /// Check level is done.
+    /// Check whether level is done.
     pub fn is_done(&self) -> bool {
         let packs_num = self.area.iter().filter(|x| x.is_pack()).count();
         let targets_num = self.area.iter().filter(|x| x.is_target()).count();
