@@ -778,10 +778,7 @@ impl LevelSet {
                     let mut error = None;
                     let mut level_lines = vec![];
                     
-                    if level_name_first {
-                        level.name = level_name.clone();
-                    }
-                    
+                    level.name = level_name.clone();
                     while let Some(rl) = lev_lines.next() {
                         l = rl?;
                         if l.starts_with(";") { break; }
