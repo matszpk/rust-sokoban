@@ -17,10 +17,11 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-use std::error;
+use std::error::Error;
 use std::io;
-use std::fs;
-use std::path;
+use std::io::{BufRead,BufReader};
+use std::fs::File;
+use std::path::Path;
 use std::fmt;
 use int_enum::IntEnum;
 
@@ -159,7 +160,7 @@ impl fmt::Display for CheckError {
     }
 }
 
-impl error::Error for CheckError {
+impl Error for CheckError {
 }
 
 #[derive(PartialEq)]
@@ -194,7 +195,7 @@ impl CheckErrors {
     }
 }
 
-impl error::Error for CheckErrors {
+impl Error for CheckErrors {
 }
 
 #[derive(PartialEq,Debug)]
@@ -218,7 +219,7 @@ impl fmt::Display for ParseError {
     }
 }
 
-impl error::Error for ParseError {
+impl Error for ParseError {
 }
 
 use ParseError::*;
@@ -665,18 +666,18 @@ impl LevelSet {
     }
     
     /// Read levelset from string.
-    pub fn from_str(str: &str) -> Result<LevelSet, Box<dyn error::Error>> {
+    pub fn from_str(str: &str) -> Result<LevelSet, Box<dyn Error>> {
         Self::from_reader(str.as_bytes())
     }
     /// Read levelset from file.
-    pub fn from_file<P: AsRef<path::Path>>(path: P) ->
-                    Result<LevelSet, Box<dyn error::Error>> {
-        let f = fs::File::open(path)?;
-        Self::from_reader(io::BufReader::new(f))
+    pub fn from_file<P: AsRef<Path>>(path: P) ->
+                    Result<LevelSet, Box<dyn Error>> {
+        let f = File::open(path)?;
+        Self::from_reader(BufReader::new(f))
     }
     /// Read levelset from reader.
-    pub fn from_reader<B: io::BufRead>(reader: B) ->
-                    Result<LevelSet, Box<dyn error::Error>> {
+    pub fn from_reader<B: BufRead>(reader: B) ->
+                    Result<LevelSet, Box<dyn Error>> {
         Ok(LevelSet{name:"".to_string(), levels: vec![]})
     }
 }
