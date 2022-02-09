@@ -17,7 +17,9 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+use std::error;
 use std::io;
+use std::fs;
 use std::path;
 use std::fmt;
 use int_enum::IntEnum;
@@ -157,6 +159,9 @@ impl fmt::Display for CheckError {
     }
 }
 
+impl error::Error for CheckError {
+}
+
 #[derive(PartialEq)]
 /// Type contains all check errors.
 pub struct CheckErrors(Vec<CheckError>);
@@ -189,6 +194,9 @@ impl CheckErrors {
     }
 }
 
+impl error::Error for CheckErrors {
+}
+
 #[derive(PartialEq,Debug)]
 /// Error caused while parsing or creating level.
 pub enum ParseError {
@@ -198,6 +206,19 @@ pub enum ParseError {
     WrongField(usize, usize),
     /// If wrong size.
     WrongSize(usize, usize),
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EmptyLines => write!(f, "Empty lines"),
+            WrongField(x, y) => write!(f, "Wrong field {}x{}", x, y),
+            WrongSize(x, y) => write!(f, "Wrong size {}x{}", x, y),
+        }
+    }
+}
+
+impl error::Error for ParseError {
 }
 
 use ParseError::*;
@@ -634,20 +655,28 @@ pub struct LevelSet {
 }
 
 impl LevelSet {
+    /// Get name of levelset.
     pub fn name(&self) -> &String {
         &self.name
     }
+    /// Get levels.
     pub fn levels(&self) -> &Vec<Level> {
         &self.levels
     }
     
-    pub fn from_str(str: &str) -> Result<LevelSet, ParseError> {
-        Ok(LevelSet{name:"".to_string(), levels: vec![]})
+    /// Read levelset from string.
+    pub fn from_str(str: &str) -> Result<LevelSet, Box<dyn error::Error>> {
+        Self::from_reader(str.as_bytes())
     }
-    pub fn from_file<P: AsRef<path::Path>>(path: P) -> Result<LevelSet, ParseError> {
-        Ok(LevelSet{name:"".to_string(), levels: vec![]})
+    /// Read levelset from file.
+    pub fn from_file<P: AsRef<path::Path>>(path: P) ->
+                    Result<LevelSet, Box<dyn error::Error>> {
+        let f = fs::File::open(path)?;
+        Self::from_reader(io::BufReader::new(f))
     }
-    pub fn from_reader<B: io::BufRead>(reader: B) -> Result<LevelSet, ParseError> {
+    /// Read levelset from reader.
+    pub fn from_reader<B: io::BufRead>(reader: B) ->
+                    Result<LevelSet, Box<dyn error::Error>> {
         Ok(LevelSet{name:"".to_string(), levels: vec![]})
     }
 }
