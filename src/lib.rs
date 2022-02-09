@@ -679,10 +679,10 @@ impl Error for LevelParseError {
 
 pub type LevelResult = Result<Level, LevelParseError>;
 
-fn level_result_set_name(lr: &mut LevelResult, name: &str) {
+fn level_result_set_name(lr: &mut LevelResult, name: &String) {
     match lr {
-        Ok(l) => l.name = name.to_string(),
-        Err(e) => e.name = name.to_string(),
+        Ok(l) => l.name = name.clone(),
+        Err(e) => e.name = name.clone(),
     }
 }
 
@@ -750,7 +750,7 @@ impl LevelSet {
         });
         
         // parse levels
-        let mut level_have_name = false;
+        let mut level_name_first = false;
         let mut level_name = String::new();
         let mut l = String::new();
         if let Some(rl) = lev_lines.next() {
@@ -759,7 +759,14 @@ impl LevelSet {
                 if l.starts_with(";") {
                     // comments
                     level_name = l[1..].trim().to_string();
-                    level_have_name = true;
+                    if lset.levels.len() == 0 {
+                        level_name_first = true;
+                    }
+                    if !level_name_first {
+                        if let Some(lr) = lset.levels.last_mut() {
+                            level_result_set_name(lr, &level_name);
+                        }
+                    }
                     while let Some(rl) = lev_lines.next() {
                         l = rl?;
                         // skip other comments
@@ -770,6 +777,11 @@ impl LevelSet {
                     let mut level = Level::empty();
                     let mut error = None;
                     let mut level_lines = vec![];
+                    
+                    if level_name_first {
+                        level.name = level_name.clone();
+                    }
+                    
                     while let Some(rl) = lev_lines.next() {
                         l = rl?;
                         if l.starts_with(";") { break; }
