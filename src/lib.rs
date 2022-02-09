@@ -692,7 +692,38 @@ impl LevelSet {
     
     fn read_from_text<B: BufRead + Read + Seek>(reader: &mut B) ->
                     Result<LevelSet, Box<dyn Error>> {
-        Ok(LevelSet{name: "".to_string(), levels: vec![] })
+        let mut name = String::new();
+        let mut lines = reader.lines();
+        if let Some(rl) = lines.next() {
+            let l = rl?; // handle error
+            if l.starts_with(";") {
+                name = l[1..].trim().to_string();
+            }
+        }
+        // skip comments and spaces
+        let mut lev_lines = lines.skip_while(|rl| {
+            if let Ok(l) = rl {
+                l.starts_with(";")
+            } else { false }
+        }).skip_while(|rl| {
+            if let Ok(l) = rl {
+                l.starts_with(";")
+            } else { false }
+        });
+        
+        loop {
+            let lev_name = String::new();
+            if let Some(rl) = lev_lines.next() {
+                let l = rl?;
+                if l.starts_with(';') {
+                    // level name
+                    lev_name = l[1..].trim().to_string();
+                }
+            }
+        }
+        
+        // parse levels
+        Ok(LevelSet{ name, levels: vec![] })
     }
     
     fn read_from_xml<B: BufRead + Read + Seek>(reader: &mut B) ->
