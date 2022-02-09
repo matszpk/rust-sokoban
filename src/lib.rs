@@ -687,6 +687,7 @@ fn level_result_set_name(lr: &mut LevelResult, name: &String) {
 }
 
 /// Level set. Contains levels and name of the level set.
+#[derive(PartialEq, Debug)]
 pub struct LevelSet {
     name: String,
     levels: Vec<LevelResult>,
@@ -708,7 +709,7 @@ impl LevelSet {
     }
     
     /// Read levelset from string.
-    pub fn from_str(str: &str) -> Result<LevelSet, Box<dyn Error>> {
+    pub fn from_string(str: &str) -> Result<LevelSet, Box<dyn Error>> {
         Self::from_reader(&mut io::Cursor::new(str.as_bytes()))
     }
     /// Read levelset from file.
@@ -744,13 +745,24 @@ impl LevelSet {
             }
         }
         // skip comments and spaces
+        let mut first_empty_line = false;
         let mut lev_lines = lines.skip_while(|rl| {
             if let Ok(l) = rl {
-                l.starts_with(";")
-            } else { false }
+                if l.starts_with(";") { return true; }
+                else if l.len()!=0 {
+                    if let Some(c) = l.chars().next() {
+                        // skip some text
+                        if c.is_alphanumeric() { return true; }
+                    }
+                } else if !first_empty_line && l.trim().len() == 0 {
+                    first_empty_line = true;
+                    return true
+                }
+            }
+            false
         }).filter(|rl| {
             if let Ok(l) = rl {
-                l.trim().len() == 0
+                l.trim().len() != 0
             } else { false }
         });
         
@@ -760,7 +772,7 @@ impl LevelSet {
         let mut l = String::new();
         if let Some(rl) = lev_lines.next() {
             l = rl?; // handle error and get line
-            loop {
+            'a: loop {
                 if l.starts_with(";") {
                     // comments
                     level_name = l[1..].trim().to_string();
@@ -768,14 +780,16 @@ impl LevelSet {
                         level_name_first = true;
                     }
                     if !level_name_first {
-                        if let Some(lr) = lset.levels.last_mut() {
-                            level_result_set_name(lr, &level_name);
+                        if let Some(level_result) = lset.levels.last_mut() {
+                            level_result_set_name(level_result, &level_name);
                         }
                     }
-                    while let Some(rl) = lev_lines.next() {
-                        l = rl?;
-                        // skip other comments
-                        if !l.starts_with(";") { break; }
+                    loop {
+                        if let Some(rl) = lev_lines.next() {
+                            l = rl?;
+                            // skip other comments
+                            if !l.starts_with(";") { break; }
+                        } else { break 'a; }
                     }
                 } else {
                     // level area
@@ -784,8 +798,8 @@ impl LevelSet {
                     let mut level_lines = vec![];
                     
                     level.name = level_name.clone();
-                    while let Some(rl) = lev_lines.next() {
-                        l = rl?;
+                    let mut end = false;
+                    loop {
                         if l.starts_with(";") { break; }
                         level.width = level.width.max(l.len());
                         if let Some(pp) = l.chars().position(is_not_field) {
@@ -795,7 +809,13 @@ impl LevelSet {
                                 error: WrongField(pp, level_lines.len()-1) })
                         }
                         level_lines.push(l.clone());
+                        if let Some(rl) = lev_lines.next() {
+                            l = rl?;
+                        } else {
+                            end = true;
+                            break; }
                     }
+                    
                     if error == None {
                         level.height = level_lines.len();
                         // construct level
@@ -809,6 +829,8 @@ impl LevelSet {
                     } else {
                         lset.levels.push(Err(error.unwrap()));
                     }
+                    
+                    if end { break; }
                 }
             }
         }
@@ -1567,6 +1589,151 @@ mod test {
             lstate.make_move(m);
         }
         assert_eq!(true, lstate.is_done());
+    }
+    
+    #[test]
+    fn test_read_from_text() {
+        let input_str = r##"; Microban IV
+
+; Copyright: David W Skinner
+; E-Mail: sasquatch@bentonrea.com
+; Web Site: http://users.bentonrea.com/~sasquatch/sokoban/
+;
+; Microban IV (102 puzzles, August 2010) This set includes a series of alphabet
+; puzzles.
+
+   #####
+####@  #
+#  $*. #
+#     ##
+#  #####
+####
+; first
+
+      #####
+   ####   #
+####  $*. #
+#  $*.   ##
+# @   #####
+#  ####
+####
+; second
+
+########
+#  #   #
+# $$*. #
+# .  . #
+# .*$$@#
+#   #  #
+########
+; third
+"##;
+        let lsr = LevelSet::from_string(input_str).unwrap();
+        let exp_lsr = LevelSet{ name: "Microban IV".to_string(),
+            levels: vec![
+                Ok(Level::from_string("first", 8, 6,
+                    "   #####\
+                     ####@  #\
+                     #  $*. #\
+                     #     ##\
+                     #  #####\
+                     ####    ").unwrap()),
+                Ok(Level::from_string("second", 11, 7,
+                    "      #####   \
+                        ####   #\
+                     ####  $*. #\
+                     #  $*.   ##\
+                     # @   #####\
+                     #  ####    \
+                     ####       ").unwrap()),
+                Ok(Level::from_string("third", 8, 7,
+                    "########\
+                     #  #   #\
+                     # $$*. #\
+                     # .  . #\
+                     # .*$$@#\
+                     #   #  #\
+                     ########").unwrap()),
+            ] };
+        assert_eq!(exp_lsr, lsr);
+        
+        let input_str = r##"; Microban IV
+
+; Copyright: David W Skinner
+; E-Mail: sasquatch@bentonrea.com
+; Web Site: http://users.bentonrea.com/~sasquatch/sokoban/
+;
+; Microban IV (102 puzzles, August 2010) This set includes a series of alphabet
+; puzzles.
+
+; first
+   #####
+####@  #
+#  $*. #
+#     ##
+#  #####
+####
+
+; second
+      #####
+   ####   #
+####  $*. #
+#  $*.   ##
+# @   #####
+#  ####
+####
+
+; third
+########
+#  #   #
+# $$*. #
+# .  . #
+# .*$$@#
+#   #  #
+########
+"##;
+        let lsr = LevelSet::from_string(input_str).unwrap();
+        assert_eq!(exp_lsr, lsr);
+
+let input_str = r##"; Microban IV
+
+; Copyright: David W Skinner
+; E-Mail: sasquatch@bentonrea.com
+Web Site: http://users.bentonrea.com/~sasquatch/sokoban/
+;
+Microban IV (102 puzzles, August 2010) This set includes a series of alphabet
+; puzzles.
+
+; first
+   #####
+####@  #
+#  $*. #
+#     ##
+#  #####
+####
+
+; second
+      #####
+   ####   #
+####  $*. #
+#  $*.   ##
+# @   #####
+#  ####
+####
+
+; third
+########
+#  #   #
+# $$*. #
+# .  . #
+# .*$$@#
+#   #  #
+########
+
+
+"##;
+        let lsr = LevelSet::from_string(input_str).unwrap();
+        assert_eq!(exp_lsr, lsr);
     }
 }
 
