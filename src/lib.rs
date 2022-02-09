@@ -19,7 +19,7 @@
 
 use std::error::Error;
 use std::io;
-use std::io::{BufRead,BufReader,Seek};
+use std::io::{Read,BufRead,BufReader,Seek};
 use std::fs::File;
 use std::path::Path;
 use std::fmt;
@@ -667,18 +667,37 @@ impl LevelSet {
     
     /// Read levelset from string.
     pub fn from_str(str: &str) -> Result<LevelSet, Box<dyn Error>> {
-        Self::from_reader(io::Cursor::new(str.as_bytes()))
+        Self::from_reader(&mut io::Cursor::new(str.as_bytes()))
     }
     /// Read levelset from file.
     pub fn from_file<P: AsRef<Path>>(path: P) ->
                     Result<LevelSet, Box<dyn Error>> {
         let f = File::open(path)?;
-        Self::from_reader(BufReader::new(f))
+        Self::from_reader(&mut BufReader::new(f))
     }
     /// Read levelset from reader.
-    pub fn from_reader<B: BufRead+Seek>(reader: B) ->
+    pub fn from_reader<B: BufRead + Read + Seek>(reader: &mut B) ->
                     Result<LevelSet, Box<dyn Error>> {
-        Ok(LevelSet{name:"".to_string(), levels: vec![]})
+        let mut first_bytes = [0;5];
+        let readed = reader.read(&mut first_bytes)?;
+        reader.rewind();
+        if readed == 5 && (&first_bytes == b"<?xml") {
+            // if xml
+            Self::read_from_xml(reader)
+        } else {
+            // if text
+            Self::read_from_text(reader)
+        }
+    }
+    
+    fn read_from_text<B: BufRead + Read + Seek>(reader: &mut B) ->
+                    Result<LevelSet, Box<dyn Error>> {
+        Ok(LevelSet{name: "".to_string(), levels: vec![] })
+    }
+    
+    fn read_from_xml<B: BufRead + Read + Seek>(reader: &mut B) ->
+                    Result<LevelSet, Box<dyn Error>> {
+        Ok(LevelSet{name: "".to_string(), levels: vec![] })
     }
 }
 
