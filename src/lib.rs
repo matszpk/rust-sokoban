@@ -24,6 +24,8 @@ use std::fs::File;
 use std::path::Path;
 use std::fmt;
 use int_enum::IntEnum;
+use quick_xml::Reader as XmlReader;
+use quick_xml::events::Event as XmlEvent;
 
 /// Type represents direction of the move.
 #[repr(u8)]
@@ -693,6 +695,25 @@ pub struct LevelSet {
     levels: Vec<LevelResult>,
 }
 
+#[derive(PartialEq,Debug)]
+pub enum XmlParseError {
+    BadStructure,
+}
+
+impl fmt::Display for XmlParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BadStructure => writeln!(f, "Bad structure of XML"),
+        }
+    }
+}
+
+
+impl Error for XmlParseError {
+}
+
+use XmlParseError::*;
+
 impl LevelSet {
     /// Get name of levelset.
     pub fn name(&self) -> &String {
@@ -769,7 +790,7 @@ impl LevelSet {
         // parse levels
         let mut level_name_first = false;
         let mut level_name = String::new();
-        let mut l = String::new();
+        let mut l;
         if let Some(rl) = lev_lines.next() {
             l = rl?; // handle error and get line
             'a: loop {
@@ -841,6 +862,168 @@ impl LevelSet {
     
     fn read_from_xml<B: BufRead + Read + Seek>(reader: &mut B) ->
                     Result<LevelSet, Box<dyn Error>> {
+        let mut lset = LevelSet{ name: String::new(), levels: vec![] };
+        
+        let mut reader = XmlReader::from_reader(reader);
+        let mut buf = Vec::new();
+        let mut in_levels = false;
+        let mut in_level_collection = false;
+        let mut in_level_line = false;
+        let mut in_title = false;
+        
+        loop {
+            let mut in_level = false;
+            let mut level_id: Option<String> = None;
+            let (mut level_width, mut level_height) = (0 as usize, 0 as usize);
+            
+            let res_event = reader.read_event(&mut buf);
+            
+            match res_event {
+                Ok(XmlEvent::Start(ref e)) => {
+                    match e.name() {
+                        b"SokobanLevels" => {
+                            if in_levels {
+                                return Err(Box::new(BadStructure));
+                            }
+                            in_levels = true;
+                        }
+                        b"Title" => {
+                            if in_level_collection {
+                                return Err(Box::new(BadStructure));
+                            }
+                            in_title = true;
+                        }
+                        b"LevelCollection" => {
+                            if !in_levels {
+                                return Err(Box::new(BadStructure));
+                            }
+                            in_level_collection = true;
+                        }
+                        b"Level" => {
+                            if !in_level_collection {
+                                return Err(Box::new(BadStructure));
+                            }
+                            for ra in e.attributes() {
+                                if let Ok(attr) = ra {
+                                    match attr.key {
+                                        b"Id" => {
+                                            level_id = Some(
+                                                attr.unescape_and_decode_value(&reader)?);
+                                        },
+                                        b"Width" => {
+                                            level_width = attr.
+                                                unescape_and_decode_value(&reader)?.parse()?;
+                                        },
+                                        b"Height" => {
+                                            level_height = attr.
+                                                unescape_and_decode_value(&reader)?.parse()?;
+                                        },
+                                        _ => {},
+                                    }
+                                }
+                            }
+                            in_level = true;
+                        }
+                        _ => {}
+                    }
+                }
+                Ok(XmlEvent::End(ref e)) => {
+                    match e.name() {
+                        b"SokobanLevels" => { in_levels = false; }
+                        b"Title" => { in_title = false; }
+                        b"LevelCollection" => { in_level_collection = false; }
+                        _ => {}
+                    }
+                }
+                Ok(XmlEvent::Text(e)) => {
+                    if in_title {
+                        lset.name = e.unescape_and_decode(&reader)?;
+                        in_title = false;
+                    }
+                }
+                Err(e) => { return Err(Box::new(e)); }
+                Ok(XmlEvent::Eof) => break,
+                _ => {}
+            }
+            
+            if in_level {
+                let mut level = Level::empty();
+                if let Some(lid) = level_id {
+                    level.name = lid.clone();
+                }
+                level.width = level_width;
+                level.height = level_height;
+                
+                let mut level_lines = vec![];
+                
+                loop {
+                    match reader.read_event(&mut buf) {
+                        Ok(XmlEvent::Start(ref e)) => {
+                            match e.name() {
+                                b"L" => {
+                                    in_level_line = true;
+                                }
+                                _ => {}
+                            }
+                        }
+                        Ok(XmlEvent::End(ref e)) => {
+                            match e.name() {
+                                b"Level" => { break; }
+                                b"L" => { in_level_line = false; }
+                                _ => {}
+                            }
+                        }
+                        Err(e) => { return Err(Box::new(e)); }
+                        Ok(XmlEvent::Text(e)) => {
+                            if in_level_line {
+                                if level.height != 0 && level_lines.len() == level.height {
+                                    break; // do not fetch next lines
+                                }
+                                
+                                // if in_level_line
+                                let l = e.unescape_and_decode(&reader)?;
+                                if l.len() > level.width {
+                                    level_lines.push(l.trim_end()[..level.width].to_string());
+                                } else {
+                                    level_lines.push(l.trim_end().to_string());
+                                }
+                            }
+                        }
+                        Ok(XmlEvent::Eof) => break,
+                        _ => {}
+                    }
+                }
+                
+                if level.height == 0 {
+                    level.height = level_lines.len();
+                }
+                if level.width == 0 { // find max width
+                    level.width = level_lines.iter().fold(0, |mx, x| mx.max(x.len()));
+                }
+                
+                // parse level
+                let mut error = None;
+                level.area = vec![Empty; level.width*level.height];
+                for y in 0..level_lines.len() {
+                    if let Some(pp) = level_lines[y].chars().position(is_not_field) {
+                        // if error found
+                        error = Some(LevelParseError{
+                                number: lset.levels.len(), name: level.name.clone(),
+                                error: WrongField(pp, level_lines.len()-1) });
+                        break;
+                    }
+                    level_lines[y].chars().enumerate().for_each(|(x,c)| {
+                                level.area[y*level.width + x] = char_to_field(c);
+                            });
+                }
+                // final push: error or level.
+                if let Some(e) = error {
+                    lset.levels.push(Err(e));
+                } else {
+                    lset.levels.push(Ok(level));
+                }
+            }
+        }
         Ok(LevelSet{name: "".to_string(), levels: vec![] })
     }
 }
