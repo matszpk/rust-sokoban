@@ -680,7 +680,7 @@ impl LevelSet {
                     Result<LevelSet, Box<dyn Error>> {
         let mut first_bytes = [0;5];
         let readed = reader.read(&mut first_bytes)?;
-        reader.rewind();
+        reader.rewind()?;
         if readed == 5 && (&first_bytes == b"<?xml") {
             // if xml
             Self::read_from_xml(reader)
