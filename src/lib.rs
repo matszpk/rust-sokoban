@@ -19,7 +19,7 @@
 
 use std::error::Error;
 use std::io;
-use std::io::{BufRead,BufReader};
+use std::io::{BufRead,BufReader,Seek};
 use std::fs::File;
 use std::path::Path;
 use std::fmt;
@@ -667,7 +667,7 @@ impl LevelSet {
     
     /// Read levelset from string.
     pub fn from_str(str: &str) -> Result<LevelSet, Box<dyn Error>> {
-        Self::from_reader(str.as_bytes())
+        Self::from_reader(io::Cursor::new(str.as_bytes()))
     }
     /// Read levelset from file.
     pub fn from_file<P: AsRef<Path>>(path: P) ->
@@ -676,7 +676,7 @@ impl LevelSet {
         Self::from_reader(BufReader::new(f))
     }
     /// Read levelset from reader.
-    pub fn from_reader<B: BufRead>(reader: B) ->
+    pub fn from_reader<B: BufRead+Seek>(reader: B) ->
                     Result<LevelSet, Box<dyn Error>> {
         Ok(LevelSet{name:"".to_string(), levels: vec![]})
     }
