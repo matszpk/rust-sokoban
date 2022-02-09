@@ -286,7 +286,7 @@ impl Level {
     }
     
     // Parse level from string.
-    pub fn from_string(name: &str, width: usize, height: usize, astr: &str)
+    pub fn from_str(name: &str, width: usize, height: usize, astr: &str)
                     -> Result<Level, ParseError> {
         if astr.len() != width*height {
             return Err(WrongSize(width, height));
@@ -709,7 +709,7 @@ impl LevelSet {
     }
     
     /// Read levelset from string.
-    pub fn from_string(str: &str) -> Result<LevelSet, Box<dyn Error>> {
+    pub fn from_str(str: &str) -> Result<LevelSet, Box<dyn Error>> {
         Self::from_reader(&mut io::Cursor::new(str.as_bytes()))
     }
     /// Read levelset from file.
@@ -808,7 +808,7 @@ impl LevelSet {
                                 number: lset.levels.len(), name: level_name.clone(),
                                 error: WrongField(pp, level_lines.len()-1) })
                         }
-                        level_lines.push(l.clone());
+                        level_lines.push(l.trim_end().to_string());
                         if let Some(rl) = lev_lines.next() {
                             l = rl?;
                         } else {
@@ -850,13 +850,13 @@ mod test {
     use super::*;
     
     #[test]
-    fn test_level_from_string() {
+    fn test_level_from_str() {
         let levela = Level::new("blable", 5, 3, vec![
             Wall, Wall, Wall, Wall, Wall,
             Wall, Target, Pack, Player, Wall,
             Wall, Wall, Wall, Wall, Wall]);
         assert!(levela.is_ok());
-        let levelb = Level::from_string("blable", 5, 3,
+        let levelb = Level::from_str("blable", 5, 3,
             "#####\
              #.$@#\
              #####");
@@ -870,7 +870,7 @@ mod test {
             Wall, Empty, Empty, Empty, Empty, Empty, Empty, Wall,
             Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty]);
         assert!(levela.is_ok());
-        let levelb = Level::from_string("git", 8, 6,
+        let levelb = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@  ...#\
@@ -887,7 +887,7 @@ mod test {
             Wall, Empty, Empty, Empty, Empty, Empty, Empty, Wall,
             Empty, Wall, Wall, Wall, Wall, Wall, Wall, Empty]);
         assert!(levela.is_ok());
-        let levelb = Level::from_string("git", 8, 6,
+        let levelb = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #   +.*#\
@@ -896,7 +896,7 @@ mod test {
               ###### ");
         assert_eq!(levela, levelb);
         
-        let levelb = Level::from_string("git", 8, 6,
+        let levelb = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #   +.*#\
@@ -904,7 +904,7 @@ mod test {
              #  x   # \
               ###### ");
         assert_eq!(Err(WrongField(3,4)), levelb);
-        let levelb = Level::from_string("git", 8, 7,
+        let levelb = Level::from_str("git", 8, 7,
             " ###### \
              #      #\
              #   +.*#\
@@ -916,7 +916,7 @@ mod test {
     
     #[test]
     fn test_check() {
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@  ...#\
@@ -925,7 +925,7 @@ mod test {
               ###### ").unwrap();
         assert_eq!(Ok(()), level.check());
         
-        let level = Level::from_string("git", 11, 6,
+        let level = Level::from_str("git", 11, 6,
             " ######    \
              #      ### \
              #@  ...#**#\
@@ -934,7 +934,7 @@ mod test {
               ######    ").unwrap();
         assert_eq!(Ok(()), level.check());
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@  .*.#\
@@ -943,7 +943,7 @@ mod test {
               ###### ").unwrap();
         assert_eq!(Ok(()), level.check());
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ### ## \
              #      #\
              #@  ...#\
@@ -954,7 +954,7 @@ mod test {
         errors.push(LevelOpen);
         assert_eq!(Err(errors), level.check());
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #   ...#\
@@ -965,7 +965,7 @@ mod test {
         errors.push(NoPlayer);
         assert_eq!(Err(errors), level.check());
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@  +..#\
@@ -976,7 +976,7 @@ mod test {
         errors.push(TooManyPlayers);
         assert_eq!(Err(errors), level.check());
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #  @   #\
              #@  ...#\
@@ -987,7 +987,7 @@ mod test {
         errors.push(TooManyPlayers);
         assert_eq!(Err(errors), level.check());
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@  .. #\
@@ -998,7 +998,7 @@ mod test {
         errors.push(TooFewTargets(3));
         assert_eq!(Err(errors), level.check());
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #     .#\
              #@  ...#\
@@ -1010,7 +1010,7 @@ mod test {
         assert_eq!(Err(errors), level.check());
         
         // availability
-        let level = Level::from_string("git", 11, 6,
+        let level = Level::from_str("git", 11, 6,
             " ######### \
              #      #..#\
              #@  ...#$$#\
@@ -1029,7 +1029,7 @@ mod test {
         assert_eq!(Err(errors), level.check());
         
         // locks
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #   ...#\
              #@  $$.#\
@@ -1040,7 +1040,7 @@ mod test {
         errors.push(Locked2x2Block(4, 2));
         assert_eq!(Err(errors), level.check());
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@  **.#\
@@ -1051,7 +1051,7 @@ mod test {
         errors.push(Locked2x2Block(4, 2));
         assert_eq!(Err(errors), level.check());
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@  ** #\
@@ -1060,7 +1060,7 @@ mod test {
               ###### ").unwrap();
         assert_eq!(Ok(()), level.check());
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #$  ..*#\
              #@    .#\
@@ -1074,7 +1074,7 @@ mod test {
         assert_eq!(Err(errors), level.check());
         
         // some random level
-        let level = Level::from_string("git", 10, 8,
+        let level = Level::from_str("git", 10, 8,
             " ####     \
              ##  ##### \
              #  $  $ # \
@@ -1086,7 +1086,7 @@ mod test {
         assert_eq!(Ok(()), level.check());
         
         // some original level
-        let level = Level::from_string("git", 20, 16,
+        let level = Level::from_str("git", 20, 16,
             "####################\
              #..#    #          #\
              #.$  $  #$$  $## $##\
@@ -1108,7 +1108,7 @@ mod test {
     
     #[test]
     fn test_make_move_and_undo_move() {
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              # @ ...#\
@@ -1121,7 +1121,7 @@ mod test {
         assert_eq!((true, false), lstate.make_move(Left));
         assert_eq!(LevelState{ level: &level,
             player_x: 1, player_y: 2,
-            area: Level::from_string("git", 8, 6,
+            area: Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@  ...#\
@@ -1138,7 +1138,7 @@ mod test {
         assert_eq!((true, false), lstate.make_move(Right));
         assert_eq!(LevelState{ level: &level,
             player_x: 3, player_y: 2,
-            area: Level::from_string("git", 8, 6,
+            area: Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #  @...#\
@@ -1155,7 +1155,7 @@ mod test {
         assert_eq!((true, false), lstate.make_move(Up));
         assert_eq!(LevelState{ level: &level,
             player_x: 2, player_y: 1,
-            area: Level::from_string("git", 8, 6,
+            area: Level::from_str("git", 8, 6,
             " ###### \
              # @    #\
              #   ...#\
@@ -1172,7 +1172,7 @@ mod test {
         assert_eq!((true, false), lstate.make_move(Down));
         assert_eq!(LevelState{ level: &level,
             player_x: 2, player_y: 3,
-            area: Level::from_string("git", 8, 6,
+            area: Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #   ...#\
@@ -1185,7 +1185,7 @@ mod test {
         assert_eq!(old_lstate, lstate);
         
         // move from target
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              # +  ..#\
@@ -1198,7 +1198,7 @@ mod test {
         assert_eq!((true, false), lstate.make_move(Left));
         assert_eq!(LevelState{ level: &level,
             player_x: 1, player_y: 2,
-            area: Level::from_string("git", 8, 6,
+            area: Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@.  ..#\
@@ -1215,7 +1215,7 @@ mod test {
         assert_eq!((true, false), lstate.make_move(Right));
         assert_eq!(LevelState{ level: &level,
             player_x: 2, player_y: 2,
-            area: Level::from_string("git", 8, 6,
+            area: Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              # +  ..#\
@@ -1228,7 +1228,7 @@ mod test {
         assert_eq!(old_lstate, lstate);
         
         // move failures
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@  ...#\
@@ -1243,7 +1243,7 @@ mod test {
             moves: vec![] },
             lstate);
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #   ..+#\
@@ -1258,7 +1258,7 @@ mod test {
             moves: vec![] },
             lstate);
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #  @   #\
              #   ...#\
@@ -1273,7 +1273,7 @@ mod test {
             moves: vec![] },
             lstate);
         
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #   ...#\
@@ -1289,7 +1289,7 @@ mod test {
             lstate);
         
         // pushes
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              # ..$  #\
@@ -1302,7 +1302,7 @@ mod test {
         assert_eq!((true, true), lstate.make_move(Left));
         assert_eq!(LevelState{ level: &level,
             player_x: 3, player_y: 3,
-            area: Level::from_string("git", 8, 7,
+            area: Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              # ..$  #\
@@ -1320,7 +1320,7 @@ mod test {
         assert_eq!((true, true), lstate.make_move(Right));
         assert_eq!(LevelState{ level: &level,
             player_x: 5, player_y: 3,
-            area: Level::from_string("git", 8, 7,
+            area: Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              # ..$  #\
@@ -1338,7 +1338,7 @@ mod test {
         assert_eq!((true, true), lstate.make_move(Up));
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 2,
-            area: Level::from_string("git", 8, 7,
+            area: Level::from_str("git", 8, 7,
             " ###### \
              # ..$  #\
              # ..@  #\
@@ -1356,7 +1356,7 @@ mod test {
         assert_eq!((true, true), lstate.make_move(Down));
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 4,
-            area: Level::from_string("git", 8, 7,
+            area: Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              # ..$  #\
@@ -1370,7 +1370,7 @@ mod test {
         assert_eq!(old_lstate, lstate);
         
         // pushes from/to target
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              #  .$  #\
@@ -1383,7 +1383,7 @@ mod test {
         assert_eq!((true, true), lstate.make_move(Left));
         assert_eq!(LevelState{ level: &level,
             player_x: 3, player_y: 3,
-            area: Level::from_string("git", 8, 7,
+            area: Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              #  .$  #\
@@ -1401,7 +1401,7 @@ mod test {
         assert_eq!((true, true), lstate.make_move(Left));
         assert_eq!(LevelState{ level: &level,
             player_x: 2, player_y: 3,
-            area: Level::from_string("git", 8, 7,
+            area: Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              #  .$  #\
@@ -1415,7 +1415,7 @@ mod test {
         assert_eq!(old_lstate, lstate);
         
         // pushes failures
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              #...$  #\
@@ -1430,7 +1430,7 @@ mod test {
             area:level.area().clone(),
             moves: vec![] },
             lstate);
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              #  .$  #\
@@ -1445,7 +1445,7 @@ mod test {
             area:level.area().clone(),
             moves: vec![] },
             lstate);
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              # ..$  #\
@@ -1461,7 +1461,7 @@ mod test {
             moves: vec![] },
             lstate);
         
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              #...$  #\
@@ -1476,7 +1476,7 @@ mod test {
             area:level.area().clone(),
             moves: vec![] },
             lstate);
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              # ..$  #\
@@ -1492,7 +1492,7 @@ mod test {
             moves: vec![] },
             lstate);
         
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..$  #\
              #...$  #\
@@ -1507,7 +1507,7 @@ mod test {
             area:level.area().clone(),
             moves: vec![] },
             lstate);
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..#  #\
              # ..$  #\
@@ -1523,7 +1523,7 @@ mod test {
             moves: vec![] },
             lstate);
         
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              #...$  #\
@@ -1538,7 +1538,7 @@ mod test {
             area:level.area().clone(),
             moves: vec![] },
             lstate);
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              # ..$  #\
@@ -1557,7 +1557,7 @@ mod test {
     
     #[test]
     fn test_reset() {
-        let level = Level::from_string("git", 8, 7,
+        let level = Level::from_str("git", 8, 7,
             " ###### \
              # ..   #\
              #  .$  #\
@@ -1575,7 +1575,7 @@ mod test {
     
     #[test]
     fn test_is_done() {
-        let level = Level::from_string("git", 8, 6,
+        let level = Level::from_str("git", 8, 6,
             " ###### \
              #      #\
              #@  ...#\
@@ -1628,17 +1628,17 @@ mod test {
 ########
 ; third
 "##;
-        let lsr = LevelSet::from_string(input_str).unwrap();
+        let lsr = LevelSet::from_str(input_str).unwrap();
         let exp_lsr = LevelSet{ name: "Microban IV".to_string(),
             levels: vec![
-                Ok(Level::from_string("first", 8, 6,
+                Ok(Level::from_str("first", 8, 6,
                     "   #####\
                      ####@  #\
                      #  $*. #\
                      #     ##\
                      #  #####\
                      ####    ").unwrap()),
-                Ok(Level::from_string("second", 11, 7,
+                Ok(Level::from_str("second", 11, 7,
                     "      #####   \
                         ####   #\
                      ####  $*. #\
@@ -1646,7 +1646,7 @@ mod test {
                      # @   #####\
                      #  ####    \
                      ####       ").unwrap()),
-                Ok(Level::from_string("third", 8, 7,
+                Ok(Level::from_str("third", 8, 7,
                     "########\
                      #  #   #\
                      # $$*. #\
@@ -1692,7 +1692,7 @@ mod test {
 #   #  #
 ########
 "##;
-        let lsr = LevelSet::from_string(input_str).unwrap();
+        let lsr = LevelSet::from_str(input_str).unwrap();
         assert_eq!(exp_lsr, lsr);
 
 let input_str = r##"; Microban IV
@@ -1732,7 +1732,7 @@ Microban IV (102 puzzles, August 2010) This set includes a series of alphabet
 
 
 "##;
-        let lsr = LevelSet::from_string(input_str).unwrap();
+        let lsr = LevelSet::from_str(input_str).unwrap();
         assert_eq!(exp_lsr, lsr);
     }
 }
