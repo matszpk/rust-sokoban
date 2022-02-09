@@ -692,12 +692,13 @@ impl LevelSet {
     
     fn read_from_text<B: BufRead + Read + Seek>(reader: &mut B) ->
                     Result<LevelSet, Box<dyn Error>> {
-        let mut name = String::new();
         let mut lines = reader.lines();
+        
+        let mut lset = LevelSet{ name: String::new(), levels: vec![] };
         if let Some(rl) = lines.next() {
             let l = rl?; // handle error
             if l.starts_with(";") {
-                name = l[1..].trim().to_string();
+                lset.name = l[1..].trim().to_string();
             }
         }
         // skip comments and spaces
@@ -705,25 +706,58 @@ impl LevelSet {
             if let Ok(l) = rl {
                 l.starts_with(";")
             } else { false }
-        }).skip_while(|rl| {
+        }).filter(|rl| {
             if let Ok(l) = rl {
                 l.trim().len() == 0
             } else { false }
         });
         
-        loop {
-            let lev_name = String::new();
-            if let Some(rl) = lev_lines.next() {
-                let l = rl?;
-                if l.starts_with(';') {
-                    // level name
-                    lev_name = l[1..].trim().to_string();
+        // parse levels
+        let mut level_have_name = false;
+        let mut level_name = String::new();
+        let mut l = String::new();
+        if let Some(rl) = lev_lines.next() {
+            l = rl?; // handle error and get line
+            loop {
+                if l.starts_with(";") {
+                    // comments
+                    level_name = l[1..].trim().to_string();
+                    level_have_name = true;
+                    while let Some(rl) = lev_lines.next() {
+                        l = rl?;
+                        // skip other comments
+                        if !l.starts_with(";") { break; }
+                    }
+                } else {
+                    // level area
+                    lset.levels.push(Level{ name: String::new(),
+                        width: 0, height: 0, area: vec![] });
+                    if let Some(level) = lset.levels.last_mut() {
+                        let mut level_lines = vec![];
+                        while let Some(rl) = lev_lines.next() {
+                            l = rl?;
+                            if l.starts_with(";") { break; }
+                            level.width = level.width.max(l.len());
+                            if let Some(pp) = l.chars().position(is_not_field) {
+                                // generate error
+                            }
+                            level_lines.push(l.clone());
+                        }
+                        level.height = level_lines.len();
+                        // construct level
+                        level.area = vec![Empty; level.width*level.height];
+                        for y in 0..level_lines.len() {
+                            level_lines[y].chars().enumerate().for_each(|(x,c)| {
+                                level.area[y*level.width + x] = char_to_field(c);
+                            });
+                        }
+                    }
                 }
             }
         }
         
         // parse levels
-        Ok(LevelSet{ name, levels: vec![] })
+        Ok(lset)
     }
     
     fn read_from_xml<B: BufRead + Read + Seek>(reader: &mut B) ->
