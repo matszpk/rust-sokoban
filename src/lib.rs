@@ -707,7 +707,7 @@ impl LevelSet {
             } else { false }
         }).skip_while(|rl| {
             if let Ok(l) = rl {
-                l.starts_with(";")
+                l.trim().len() == 0
             } else { false }
         });
         
