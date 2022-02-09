@@ -998,7 +998,8 @@ impl LevelSet {
                     level.height = level_lines.len();
                 }
                 if level.width == 0 { // find max width
-                    level.width = level_lines.iter().fold(0, |mx, x| mx.max(x.len()));
+                    level.width = level_lines.iter().map(|x| x.len()).max().
+                            unwrap_or_default();
                 }
                 
                 // parse level
