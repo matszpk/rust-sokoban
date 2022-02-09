@@ -270,6 +270,11 @@ impl Level {
         &self.area
     }
     
+    /// Create empty level
+    pub fn empty() -> Level {
+        Level{ name: String::new(), width: 0, height: 0, area: vec![] }
+    }
+    
     // Create level from area data.
     pub fn new(name: &str, width: usize, height: usize, area: Vec<Field>)
                     -> Result<Level, ParseError> {
@@ -649,10 +654,42 @@ impl<'a> LevelState<'a> {
     }
 }
 
+/// Level parse errors - contains errors and level name
+#[derive(PartialEq)]
+pub struct LevelParseError {
+    number: usize,
+    name: String,
+    error: ParseError,
+}
+
+impl fmt::Display for LevelParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Nr: {}, Name: {}, Error: {}", self.number, self.name, self.error)
+    }
+}
+
+impl fmt::Debug for LevelParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (self as &dyn fmt::Display).fmt(f)
+    }
+}
+
+impl Error for LevelParseError {
+}
+
+pub type LevelResult = Result<Level, LevelParseError>;
+
+fn level_result_set_name(lr: &mut LevelResult, name: &str) {
+    match lr {
+        Ok(l) => l.name = name.to_string(),
+        Err(e) => e.name = name.to_string(),
+    }
+}
+
 /// Level set. Contains levels and name of the level set.
 pub struct LevelSet {
     name: String,
-    levels: Vec<Level>,
+    levels: Vec<LevelResult>,
 }
 
 impl LevelSet {
@@ -661,7 +698,7 @@ impl LevelSet {
         &self.name
     }
     /// Get levels.
-    pub fn levels(&self) -> &Vec<Level> {
+    pub fn levels(&self) -> &Vec<LevelResult> {
         &self.levels
     }
     
@@ -730,19 +767,22 @@ impl LevelSet {
                     }
                 } else {
                     // level area
-                    lset.levels.push(Level{ name: String::new(),
-                        width: 0, height: 0, area: vec![] });
-                    if let Some(level) = lset.levels.last_mut() {
-                        let mut level_lines = vec![];
-                        while let Some(rl) = lev_lines.next() {
-                            l = rl?;
-                            if l.starts_with(";") { break; }
-                            level.width = level.width.max(l.len());
-                            if let Some(pp) = l.chars().position(is_not_field) {
-                                // generate error
-                            }
-                            level_lines.push(l.clone());
+                    let mut level = Level::empty();
+                    let mut error = None;
+                    let mut level_lines = vec![];
+                    while let Some(rl) = lev_lines.next() {
+                        l = rl?;
+                        if l.starts_with(";") { break; }
+                        level.width = level.width.max(l.len());
+                        if let Some(pp) = l.chars().position(is_not_field) {
+                            // generate error
+                            error = Some(LevelParseError{
+                                number: lset.levels.len(), name: level_name.clone(),
+                                error: WrongField(pp, level_lines.len()-1) })
                         }
+                        level_lines.push(l.clone());
+                    }
+                    if error == None {
                         level.height = level_lines.len();
                         // construct level
                         level.area = vec![Empty; level.width*level.height];
@@ -751,6 +791,9 @@ impl LevelSet {
                                 level.area[y*level.width + x] = char_to_field(c);
                             });
                         }
+                        lset.levels.push(Ok(level));
+                    } else {
+                        lset.levels.push(Err(error.unwrap()));
                     }
                 }
             }
