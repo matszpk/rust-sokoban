@@ -702,6 +702,11 @@ impl LevelSet {
         &self.levels
     }
     
+    /// Return true if level set has errors.
+    pub fn has_errors(&self) -> bool {
+        self.levels.iter().find(|lr| lr.is_err()).is_some()
+    }
+    
     /// Read levelset from string.
     pub fn from_str(str: &str) -> Result<LevelSet, Box<dyn Error>> {
         Self::from_reader(&mut io::Cursor::new(str.as_bytes()))
