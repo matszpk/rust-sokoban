@@ -1010,7 +1010,7 @@ impl LevelSet {
                         // if error found
                         error = Some(LevelParseError{
                                 number: lset.levels.len(), name: level.name.clone(),
-                                error: WrongField(pp, level_lines.len()-1) });
+                                error: WrongField(pp, y) });
                         break;
                     }
                     level_lines[y].chars().enumerate().for_each(|(x,c)| {
@@ -2083,6 +2083,65 @@ Microban IV (102 puzzles, August 2010) This set includes a series of alphabet
 </SokobanLevels>"##;
             
             let lsr = LevelSet::from_str(input_str).unwrap();
+            assert_eq!(exp_lsr, lsr);
+            
+            let input_str = r##"<?xml version="1.0" encoding="utf-8"?>
+<SokobanLevels xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="SokobanLev.xsd">
+  <Title>Microban</Title>
+  <Email>sasquatch@bentonrea.com</Email>
+  <Url>http://users.bentonrea.com/~sasquatch/sokoban/</Url>
+  <LevelCollection Copyright="David W Skinner" MaxWidth="30" MaxHeight="17">
+    <Level Id="funny">
+      <L>####</L>
+      <L># .#</L>
+      <L>#  ###</L>
+      <L>#*@  #</L>
+      <L>#  $ #</L>
+      <L>#  ###</L>
+      <L>####</L>
+    </Level>
+    <Level Id="blocky">
+      <L>######</L>
+      <L>#    #</L>
+      <L># #@ #</L>
+      <L># $* #</L>
+      <L># .* #</L>
+      <L>#    #</L>
+      <L>######</L>
+    </Level>
+    <Level Id="harder">
+      <L>  ####</L>
+      <L>###  ####</L>
+      <L># b   $ #</L>
+      <L># #  #$ #</L>
+      <L># . .#@ #</L>
+      <L>#########</L>
+    </Level>
+  </LevelCollection>
+</SokobanLevels>"##;
+            
+            let lsr = LevelSet::from_str(input_str).unwrap();
+            let exp_lsr = LevelSet{ name: "Microban".to_string(),
+            levels: vec![
+                Ok(Level::from_str("funny", 6, 7,
+                    "####  \
+                     # .#  \
+                     #  ###\
+                     #*@  #\
+                     #  $ #\
+                     #  ###\
+                     ####  ").unwrap()),
+                Ok(Level::from_str("blocky", 6, 7,
+                    "######\
+                     #    #\
+                     # #@ #\
+                     # $* #\
+                     # .* #\
+                     #    #\
+                     ######").unwrap()),
+                Err(LevelParseError{ number: 2, name: "harder".to_string(),
+                    error: WrongField(2, 2) }),
+            ] };
             assert_eq!(exp_lsr, lsr);
     }
 }
