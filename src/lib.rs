@@ -29,7 +29,7 @@ use quick_xml::events::Event as XmlEvent;
 
 /// Type represents direction of the move.
 #[repr(u8)]
-#[derive(PartialEq,Debug,Clone,Copy,IntEnum)]
+#[derive(PartialEq,Eq,Debug,Clone,Copy,IntEnum)]
 pub enum Direction {
     /// Move left.
     Left = 0,
@@ -47,12 +47,13 @@ pub enum Direction {
     PushUp = 6,
     /// Move and push down.
     PushDown = 7,
+    // No direction.
     NoDirection = 8,
 }
 
 /// Type represents field in level area.
 #[repr(u8)]
-#[derive(PartialEq,Debug,Clone,Copy,IntEnum)]
+#[derive(PartialEq,Eq,Debug,Clone,Copy,IntEnum)]
 pub enum Field {
     /// Empty field.
     Empty = 0,
@@ -70,7 +71,7 @@ pub enum Field {
     PlayerOnTarget = 6,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Eq)]
 /// Check level error.
 pub enum CheckError {
     /// No player.
@@ -165,7 +166,7 @@ impl fmt::Display for CheckError {
 impl Error for CheckError {
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq,Eq)]
 /// Type contains all check errors.
 pub struct CheckErrors(Vec<CheckError>);
 
@@ -200,7 +201,7 @@ impl CheckErrors {
 impl Error for CheckErrors {
 }
 
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq,Eq,Debug)]
 /// Error caused while parsing or creating level.
 pub enum ParseError {
     /// If empty lines.
@@ -229,7 +230,7 @@ use ParseError::*;
 /// Level in game. Name is optional name - can be empty. Width and height determines
 /// dimensions of the level. An area is fields of level ordered from top to bottom and
 /// from left to right.
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq,Eq,Debug)]
 pub struct Level {
     name: String,
     width: usize,
@@ -462,7 +463,7 @@ impl Level {
 
 /// LevelState is state game in given a level. A level state contains changed
 /// an area of a level after moves. Initially an area is copied from level.
-#[derive(PartialEq,Debug,Clone)]
+#[derive(PartialEq,Eq,Debug,Clone)]
 pub struct LevelState<'a> {
     level: &'a Level,
     player_x: usize,
@@ -651,7 +652,7 @@ impl<'a> LevelState<'a> {
 }
 
 /// Level parse errors - contains errors and level name
-#[derive(PartialEq)]
+#[derive(PartialEq,Eq)]
 pub struct LevelParseError {
     number: usize,
     name: String,
@@ -683,13 +684,13 @@ fn level_result_set_name(lr: &mut LevelResult, name: &String) {
 }
 
 /// Level set. Contains levels and name of the level set.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq,Eq, Debug)]
 pub struct LevelSet {
     name: String,
     levels: Vec<LevelResult>,
 }
 
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq,Eq,Debug)]
 pub enum XmlParseError {
     BadStructure,
 }
