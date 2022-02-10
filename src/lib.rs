@@ -674,6 +674,7 @@ impl fmt::Debug for LevelParseError {
 impl Error for LevelParseError {
 }
 
+/// Level result - contains level or parse error.
 pub type LevelResult = Result<Level, LevelParseError>;
 
 fn level_result_set_name(lr: &mut LevelResult, name: &String) {
@@ -690,8 +691,10 @@ pub struct LevelSet {
     levels: Vec<LevelResult>,
 }
 
+/// Parse error concerned XML structure.
 #[derive(PartialEq,Eq,Debug)]
 pub enum XmlParseError {
+    /// If bad structure of XML content.
     BadStructure,
 }
 
