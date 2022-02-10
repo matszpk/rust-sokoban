@@ -1025,7 +1025,7 @@ impl LevelSet {
                 }
             }
         }
-        Ok(LevelSet{name: "".to_string(), levels: vec![] })
+        Ok(lset)
     }
 }
 
@@ -1979,6 +1979,82 @@ Microban IV (102 puzzles, August 2010) This set includes a series of alphabet
 
         let lsr = LevelSet::from_str(input_str).unwrap();
         assert_eq!(exp_lsr, lsr);
+    }
+    
+    #[test]
+    fn test_read_from_xml() {
+        let input_str = r##"<?xml version="1.0" encoding="utf-8"?>
+<SokobanLevels xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="SokobanLev.xsd">
+  <Title>Microban</Title>
+  <Description>
+Microban (155 puzzles, revised April, 2000) This is a good set for
+beginners and children. Most of the puzzles are small and illustrate a
+particular concept. More experienced players should also find them
+interesting, since they are as different from each other as I could
+make them given their size. Sokoholics could perhaps time themselves
+on completing the whole set. This set also contains puzzles which I
+thought were interesting but too easy to include in my regular sets.
+  </Description>
+  <Email>sasquatch@bentonrea.com</Email>
+  <Url>http://users.bentonrea.com/~sasquatch/sokoban/</Url>
+  <LevelCollection Copyright="David W Skinner" MaxWidth="30" MaxHeight="17">
+    <Level Id="funny" Width="6" Height="7">
+      <L>####</L>
+      <L># .#</L>
+      <L>#  ###</L>
+      <L>#*@  #</L>
+      <L>#  $ #</L>
+      <L>#  ###</L>
+      <L>####</L>
+    </Level>
+    <Level Id="blocky" Width="6" Height="7">
+      <L>######</L>
+      <L>#    #</L>
+      <L># #@ #</L>
+      <L># $* #</L>
+      <L># .* #</L>
+      <L>#    #</L>
+      <L>######</L>
+    </Level>
+    <Level Id="harder" Width="9" Height="6">
+      <L>  ####</L>
+      <L>###  ####</L>
+      <L>#     $ #</L>
+      <L># #  #$ #</L>
+      <L># . .#@ #</L>
+      <L>#########</L>
+    </Level>
+  </LevelCollection>
+</SokobanLevels>"##;
+        
+            let lsr = LevelSet::from_str(input_str).unwrap();
+            let exp_lsr = LevelSet{ name: "Microban".to_string(),
+            levels: vec![
+                Ok(Level::from_str("funny", 6, 7,
+                    "####  \
+                     # .#  \
+                     #  ###\
+                     #*@  #\
+                     #  $ #\
+                     #  ###\
+                     ####  ").unwrap()),
+                Ok(Level::from_str("blocky", 6, 7,
+                    "######\
+                     #    #\
+                     # #@ #\
+                     # $* #\
+                     # .* #\
+                     #    #\
+                     ######").unwrap()),
+                Ok(Level::from_str("harder", 9, 6,
+                    "  ####   \
+                     ###  ####\
+                     #     $ #\
+                     # #  #$ #\
+                     # . .#@ #\
+                     #########").unwrap()),
+            ] };
+            assert_eq!(exp_lsr, lsr);
     }
 }
 
