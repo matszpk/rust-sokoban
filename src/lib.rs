@@ -2140,10 +2140,3 @@ Microban IV (102 puzzles, August 2010) This set includes a series of alphabet
             assert_eq!(exp_lsr, lsr);
     }
 }
-
-pub fn sokhello() {
-    let mut errors = CheckErrors::new();
-    errors.push(CheckError::LockedPackApartWalls(4, 5));
-    errors.push(CheckError::Locked2x2Block(7, 7));
-    println!("SokHello! {}x", errors)
-}

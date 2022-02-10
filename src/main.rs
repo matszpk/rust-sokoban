@@ -1,5 +1,4 @@
-use sokobanlib::sokhello;
+use sokobanlib::*;
 
 fn main() {
-    sokhello();
 }
