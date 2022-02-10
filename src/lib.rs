@@ -302,12 +302,6 @@ impl Level {
         Ok(Level{ name: String::from(name), width, height, area: area })
     }
     
-    /// Parse level from lines.
-    pub fn from_lines<B>(reader: &io::Lines::<B>) ->
-                    Result<Level, ParseError> {
-        Err(EmptyLines)
-    }
-    
     fn check_level_by_fill(&self, px: usize, py: usize, errors: &mut CheckErrors) {
         #[derive(Debug)]
         struct StackItem{ x: usize, y: usize, d: Direction }
