@@ -827,7 +827,7 @@ impl LevelSet {
                             // generate error
                             error = Some(LevelParseError{
                                 number: lset.levels.len(), name: level_name.clone(),
-                                error: WrongField(pp, level_lines.len()-1) })
+                                error: WrongField(pp, level_lines.len()) })
                         }
                         level_lines.push(l.trim_end().to_string());
                         if let Some(rl) = lev_lines.next() {
@@ -1916,6 +1916,67 @@ Microban IV (102 puzzles, August 2010) This set includes a series of alphabet
 
 
 "##;
+        let lsr = LevelSet::from_str(input_str).unwrap();
+        assert_eq!(exp_lsr, lsr);
+
+        let input_str = r##"; Microban IV
+
+; Copyright: David W Skinner
+; E-Mail: sasquatch@bentonrea.com
+Web Site: http://users.bentonrea.com/~sasquatch/sokoban/
+;
+Microban IV (102 puzzles, August 2010) This set includes a series of alphabet
+; puzzles.
+
+; first
+   #####
+####@  #
+#  $*. #
+#     ##
+#  #####
+####
+
+; second
+      #####
+   ####   #
+####  $*. #
+#  $*.  b##
+# @   #####
+#  ####
+####
+
+; third
+########
+#  #   #
+# $$*. #
+# .  . #
+# .*$$@#
+#   #  #
+########
+
+
+"##;
+        let exp_lsr = LevelSet{ name: "Microban IV".to_string(),
+            levels: vec![
+                Ok(Level::from_str("first", 8, 6,
+                    "   #####\
+                     ####@  #\
+                     #  $*. #\
+                     #     ##\
+                     #  #####\
+                     ####    ").unwrap()),
+                Err(LevelParseError{ number: 1, name: "second".to_string(),
+                        error: WrongField(8, 3) }),
+                Ok(Level::from_str("third", 8, 7,
+                    "########\
+                     #  #   #\
+                     # $$*. #\
+                     # .  . #\
+                     # .*$$@#\
+                     #   #  #\
+                     ########").unwrap()),
+            ] };
+
         let lsr = LevelSet::from_str(input_str).unwrap();
         assert_eq!(exp_lsr, lsr);
     }
