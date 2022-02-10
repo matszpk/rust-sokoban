@@ -41,7 +41,7 @@ pub enum Direction {
     PushUp = 6,
     /// Move and push down.
     PushDown = 7,
-    // No direction.
+    /// No direction.
     NoDirection = 8,
 }
 
