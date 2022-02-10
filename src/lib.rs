@@ -982,7 +982,7 @@ impl LevelSet {
                                 
                                 // if in_level_line
                                 let l = e.unescape_and_decode(&reader)?;
-                                if l.len() > level.width {
+                                if level.width != 0 && l.len() > level.width {
                                     level_lines.push(l.trim_end()[..level.width].to_string());
                                 } else {
                                     level_lines.push(l.trim_end().to_string());
@@ -1986,15 +1986,6 @@ Microban IV (102 puzzles, August 2010) This set includes a series of alphabet
         let input_str = r##"<?xml version="1.0" encoding="utf-8"?>
 <SokobanLevels xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="SokobanLev.xsd">
   <Title>Microban</Title>
-  <Description>
-Microban (155 puzzles, revised April, 2000) This is a good set for
-beginners and children. Most of the puzzles are small and illustrate a
-particular concept. More experienced players should also find them
-interesting, since they are as different from each other as I could
-make them given their size. Sokoholics could perhaps time themselves
-on completing the whole set. This set also contains puzzles which I
-thought were interesting but too easy to include in my regular sets.
-  </Description>
   <Email>sasquatch@bentonrea.com</Email>
   <Url>http://users.bentonrea.com/~sasquatch/sokoban/</Url>
   <LevelCollection Copyright="David W Skinner" MaxWidth="30" MaxHeight="17">
@@ -2054,6 +2045,44 @@ thought were interesting but too easy to include in my regular sets.
                      # . .#@ #\
                      #########").unwrap()),
             ] };
+            assert_eq!(exp_lsr, lsr);
+            
+            let input_str = r##"<?xml version="1.0" encoding="utf-8"?>
+<SokobanLevels xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="SokobanLev.xsd">
+  <Title>Microban</Title>
+  <Email>sasquatch@bentonrea.com</Email>
+  <Url>http://users.bentonrea.com/~sasquatch/sokoban/</Url>
+  <LevelCollection Copyright="David W Skinner" MaxWidth="30" MaxHeight="17">
+    <Level Id="funny">
+      <L>####</L>
+      <L># .#</L>
+      <L>#  ###</L>
+      <L>#*@  #</L>
+      <L>#  $ #</L>
+      <L>#  ###</L>
+      <L>####</L>
+    </Level>
+    <Level Id="blocky">
+      <L>######</L>
+      <L>#    #</L>
+      <L># #@ #</L>
+      <L># $* #</L>
+      <L># .* #</L>
+      <L>#    #</L>
+      <L>######</L>
+    </Level>
+    <Level Id="harder">
+      <L>  ####</L>
+      <L>###  ####</L>
+      <L>#     $ #</L>
+      <L># #  #$ #</L>
+      <L># . .#@ #</L>
+      <L>#########</L>
+    </Level>
+  </LevelCollection>
+</SokobanLevels>"##;
+            
+            let lsr = LevelSet::from_str(input_str).unwrap();
             assert_eq!(exp_lsr, lsr);
     }
 }
