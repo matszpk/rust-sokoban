@@ -19,6 +19,15 @@
 
 use std::error::Error;
 
+use termion::clear;
+use termion::input::TermRead;
+use termion::color::*;
+use termion::style::*;
+use termion::cursor;
+use termion::event::{Event,Key};
+
+use crate::defs::*;
+
 use crate::GameResult;
 use crate::LevelState;
 
@@ -29,6 +38,26 @@ pub struct TermGame<'a> {
 impl<'a> TermGame<'a> {
     pub fn create(ls: &'a LevelState<'a>) -> TermGame<'a> {
         TermGame{ state: ls }
+    }
+    
+    pub fn state(&self) -> &'a LevelState<'a> {
+        self.state
+    }
+    
+    fn display_level(&self, x: usize, y: usize) {
+    }
+    
+    fn make_move_fast(&mut self, d: Direction) {
+    }
+    
+    fn make_move_scroll(&mut self, d: Direction) {
+    }
+    
+    fn display_game(&self) {
+    }
+    
+    fn make_move(&mut self, d: Direction) -> bool {
+        false
     }
     
     pub fn start(&mut self) -> Result<GameResult, Box<dyn Error>> {
