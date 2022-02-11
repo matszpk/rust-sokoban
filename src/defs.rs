@@ -277,3 +277,12 @@ pub(crate) fn char_to_field(x: char) -> Field {
 pub(crate) fn is_not_field(x: char) -> bool {
     x!=' ' && x!='#' && x!='@' && x!='+' && x!='.' && x!='$' && x!='*'
 }
+
+/// Possible game result.
+pub enum GameResult {
+    /// If level solved.
+    Solved,
+    /// If game canceled.
+    Canceled,
+}
+

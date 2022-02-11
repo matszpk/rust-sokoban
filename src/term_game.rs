@@ -1,4 +1,4 @@
-// lib.rs - main library of sokoban
+// term_game.rs - main library of sokoban
 //
 // sokoban - Sokoban game
 // Copyright (C) 2022  Mateusz Szpakowski
@@ -17,17 +17,21 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-mod defs;
-pub use self::defs::*; 
+use std::error::Error;
 
-mod level;
-pub use self::level::*;
+use crate::GameResult;
+use crate::LevelState;
 
-mod level_state;
-pub use self::level_state::*;
+pub struct TermGame<'a> {
+    state: &'a LevelState<'a>,
+}
 
-mod level_set;
-pub use self::level_set::*;
-
-mod term_game;
-pub use self::term_game::*;
+impl<'a> TermGame<'a> {
+    pub fn create(ls: &'a LevelState<'a>) -> TermGame<'a> {
+        TermGame{ state: ls }
+    }
+    
+    pub fn start(&mut self) -> Result<GameResult, Box<dyn Error>> {
+        Ok(GameResult::Solved)
+    }
+}
