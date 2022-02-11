@@ -28,9 +28,9 @@ use CheckError::*;
 /// an area of a level after moves. Initially an area is copied from level.
 #[derive(PartialEq,Eq,Debug,Clone)]
 pub struct LevelState<'a> {
-    level: &'a Level,
-    player_x: usize,
-    player_y: usize,
+    pub(crate) level: &'a Level,
+    pub(crate) player_x: usize,
+    pub(crate) player_y: usize,
     area: Vec<Field>,
     moves: Vec<Direction>,
 }
