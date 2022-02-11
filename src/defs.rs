@@ -285,4 +285,3 @@ pub enum GameResult {
     /// If game canceled.
     Canceled,
 }
-
