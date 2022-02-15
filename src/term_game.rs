@@ -220,7 +220,6 @@ impl<'a> TermGame<'a> {
         self.state.reset();
         self.display_game(&mut stdout)?;
         
-        
         for e in std::io::stdin().events() {
             if self.state.is_done() { break; }
             match e {
