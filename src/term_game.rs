@@ -25,7 +25,6 @@ use termion::terminal_size;
 use termion::clear;
 use termion::input::TermRead;
 use termion::color::*;
-use termion::style::*;
 use termion::cursor;
 use termion::raw::IntoRawMode;
 use termion::event::{Event,Key};
@@ -42,8 +41,6 @@ pub struct TermGame<'a> {
     state: &'a mut LevelState<'a>,
     term_width: usize,
     term_height: usize,
-    display_x: usize,
-    display_y: usize,
     empty_line: Vec<u8>,
 }
 
@@ -76,7 +73,6 @@ fn print_field<W: Write>(stdout: &mut W,f: Field) -> Result<(), Box<dyn Error>> 
         Target => format!("{} {}", Bg(Yellow), Bg(Black)),
         PlayerOnTarget => format!("{}o{}", Bg(Yellow), Bg(Black)),
         PackOnTarget => format!("{}▒{}", Bg(Yellow), Bg(Black)),
-        _ => { panic!("Unexpected!"); },
     };
     stdout.write(fmt_str.as_bytes())?;
     Ok(())
@@ -87,7 +83,6 @@ impl<'a> TermGame<'a> {
         let (width, height) = terminal_size().unwrap();
         TermGame{ state: ls, term_width: width as usize,
                 term_height: height as usize,
-                display_x: 0, display_y: 0,
                 empty_line: vec![b' '; width as usize] }
     }
     
@@ -109,7 +104,7 @@ impl<'a> TermGame<'a> {
         let (sdy, sly, fdh) = determine_display_and_level_position(levelh, disph, cy);
         
         // fill empties
-        for dy in 0..sdy {
+        for _ in 0..sdy {
             stdout.write(self.empty_line.as_slice())?;
         }
         for dy in sdy..sdy+fdh {
@@ -121,26 +116,13 @@ impl<'a> TermGame<'a> {
             }
             stdout.write(&self.empty_line.as_slice()[sdx+fdw..dispw])?;
         }
-        for dy in sdy+fdh..disph {
+        for _ in sdy+fdh..disph {
             stdout.write(self.empty_line.as_slice())?;
         }
         // display status bar
         
         write!(stdout, "Moves: {:>5}", self.state.moves().len())?;
         stdout.flush()?;
-        Ok(())
-    }
-    
-    fn make_move_fast<W: Write>(&mut self, stdout: &mut W, d: Direction)
-                -> Result<(), Box<dyn Error>> {
-        write!(stdout, "{}", cursor::Goto((self.state.player_x-self.display_x+1) as u16,
-                    (self.state.player_y-self.display_y+1) as u16))?;
-        Ok(())
-    }
-    
-    fn undo_move_fast<W: Write>(&mut self, stdout: &mut W) -> Result<(), Box<dyn Error>> {
-        write!(stdout, "{}", cursor::Goto((self.state.player_x-self.display_x+1) as u16,
-                    (self.state.player_y-self.display_y+1) as u16))?;
         Ok(())
     }
     
@@ -163,7 +145,6 @@ impl<'a> TermGame<'a> {
     }
     
     pub fn start(&mut self) -> Result<GameResult, Box<dyn Error>> {
-        let stdin = io::stdin();
         let mut stdout = io::stdout().into_raw_mode()?;
         
         write!(stdout, "{}{}{}{}", Bg(Black), Fg(White), clear::All,
