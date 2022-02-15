@@ -65,7 +65,7 @@ pub enum Field {
     PlayerOnTarget = 6,
 }
 
-#[derive(Debug,PartialEq,Eq)]
+#[derive(Debug,PartialEq,Eq,Copy,Clone)]
 /// Check level error.
 pub enum CheckError {
     /// No player.
@@ -90,7 +90,7 @@ pub enum CheckError {
     Locked2x2Block(usize, usize),
 }
 
-#[derive(PartialEq,Eq,Debug)]
+#[derive(PartialEq,Eq,Debug,Copy,Clone)]
 /// Error caused while parsing or creating level.
 pub enum ParseError {
     /// If empty lines.
@@ -102,7 +102,7 @@ pub enum ParseError {
 }
 
 /// Parse error concerned XML structure.
-#[derive(PartialEq,Eq,Debug)]
+#[derive(PartialEq,Eq,Debug,Clone,Copy)]
 pub enum XmlParseError {
     /// If bad structure of XML content.
     BadStructure,
@@ -179,7 +179,7 @@ impl fmt::Display for CheckError {
 impl Error for CheckError {
 }
 
-#[derive(PartialEq,Eq)]
+#[derive(PartialEq,Eq,Clone)]
 /// Type contains all check errors.
 pub struct CheckErrors(Vec<CheckError>);
 

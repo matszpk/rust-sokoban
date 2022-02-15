@@ -38,14 +38,17 @@ pub struct LevelState<'a> {
 
 impl<'a> LevelState<'a> {
     /// Create new level state from level.
-    pub fn new(level: &'a Level) -> Result<LevelState<'a>, CheckError> {
+    pub fn new(level: &'a Level) -> Result<LevelState<'a>, CheckErrors> {
         if let Some(pp) = level.area.iter().position(|x| x.is_player()) {
             let player_x = pp % level.width();
             let player_y = pp / level.width();
+            level.check()?;
             Ok(LevelState{ level, player_x, player_y, area: level.area().clone(),
                     moves: vec!(), pushes_count: 0 })
         } else {
-            Err(NoPlayer)
+            let mut errors = CheckErrors::new();
+            errors.push(NoPlayer);
+            Err(errors)
         }
     }
     

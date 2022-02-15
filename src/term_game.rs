@@ -37,6 +37,7 @@ use crate::LevelState;
 use Field::*;
 use Direction::*;
 
+/// The game in terminal mode. Structure contains level state and some terminal utilities.
 pub struct TermGame<'a> {
     state: &'a mut LevelState<'a>,
     term_width: usize,
@@ -79,6 +80,7 @@ fn print_field<W: Write>(stdout: &mut W,f: Field) -> Result<(), Box<dyn Error>> 
 }
 
 impl<'a> TermGame<'a> {
+    /// Create terminal game.
     pub fn create(ls: &'a mut LevelState<'a>) -> TermGame<'a> {
         let (width, height) = terminal_size().unwrap();
         TermGame{ state: ls, term_width: width as usize,
@@ -86,6 +88,7 @@ impl<'a> TermGame<'a> {
                 empty_line: vec![b' '; width as usize] }
     }
     
+    /// Get level state.
     pub fn state(&'a self) -> &'a LevelState<'a> {
         self.state
     }
@@ -145,6 +148,7 @@ impl<'a> TermGame<'a> {
         Ok(mv)
     }
     
+    /// Start game in terminal.
     pub fn start(&mut self) -> Result<GameResult, Box<dyn Error>> {
         let mut stdout = io::stdout().into_raw_mode()?;
         
