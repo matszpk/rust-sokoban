@@ -117,7 +117,7 @@ impl<'a> TermGame<'a> {
                         (dy-sdy+sly)*levelw + slx + fdw];
             stdout.write(&self.empty_line.as_slice()[0..sdx])?;
             for dx in sdx..sdx+fdw {
-                print_field(stdout, state_line[dx-sdx+slx])?;
+                print_field(stdout, state_line[dx-sdx])?;
             }
             stdout.write(&self.empty_line.as_slice()[sdx+fdw..dispw])?;
         }

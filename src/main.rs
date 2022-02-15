@@ -38,5 +38,7 @@ fn main() {
         let mut level_state = LevelState::new(&level).unwrap();
         let mut term_game = TermGame::create(&mut level_state);
         term_game.start().unwrap();
+    } else if let Err(ref err) = levels[levelset_index] {
+        panic!("{}", err);
     }
 }
