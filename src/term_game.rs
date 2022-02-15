@@ -121,7 +121,7 @@ impl<'a> TermGame<'a> {
         }
         // display status bar
         
-        write!(stdout, "Moves: {:>5}  Pushes: {:>5}", self.state.moves().len(),
+        write!(stdout, "Moves: {:>7}  Pushes: {:>7}", self.state.moves().len(),
                 self.state.pushes_count())?;
         stdout.flush()?;
         Ok(())
