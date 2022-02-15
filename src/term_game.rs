@@ -36,11 +36,14 @@ use crate::GameResult;
 use crate::LevelState;
 
 use Field::*;
+use Direction::*;
 
 pub struct TermGame<'a> {
     state: &'a mut LevelState<'a>,
     term_width: usize,
     term_height: usize,
+    display_x: usize,
+    display_y: usize,
     empty_line: Vec<u8>,
 }
 
@@ -64,11 +67,27 @@ fn determine_display_and_level_position(leveldim: usize, dispdim: usize,
     }
 }
 
+fn print_field<W: Write>(stdout: &mut W,f: Field) -> Result<(), Box<dyn Error>> {
+    let fmt_str: String = match f {
+        Empty => " ".to_string(),
+        Wall => "░".to_string(),
+        Player => "o".to_string(),
+        Pack => "▒".to_string(),
+        Target => format!("{}{}", Bg(Yellow), Bg(Black)),
+        PlayerOnTarget => format!("{}o{}", Bg(Yellow), Bg(Black)),
+        PackOnTarget => format!("{}▒{}", Bg(Yellow), Bg(Black)),
+        _ => { panic!("Unexpected!"); },
+    };
+    stdout.write(fmt_str.as_bytes())?;
+    Ok(())
+}
+
 impl<'a> TermGame<'a> {
     pub fn create(ls: &'a mut LevelState<'a>) -> TermGame<'a> {
         let (width, height) = terminal_size().unwrap();
         TermGame{ state: ls, term_width: width as usize,
                 term_height: height as usize,
+                display_x: 0, display_y: 0,
                 empty_line: vec![b' '; width as usize] }
     }
     
@@ -98,56 +117,76 @@ impl<'a> TermGame<'a> {
                         (dy-sdy+sly)*levelw + slx + fdw];
             stdout.write(&self.empty_line.as_slice()[0..sdx])?;
             for dx in sdx..sdx+fdw {
-                let fmt_str: String = match state_line[dx-sdx+slx] {
-                    Empty => " ".to_string(),
-                    Wall => "░".to_string(),
-                    Player => "o".to_string(),
-                    Pack => "▒".to_string(),
-                    Target => format!("{}{}", Bg(Yellow), Bg(Black)),
-                    PlayerOnTarget => format!("{}o{}", Bg(Yellow), Bg(Black)),
-                    PackOnTarget => format!("{}▒{}", Bg(Yellow), Bg(Black)),
-                    _ => { panic!("Unexpected!"); },
-                };
-                stdout.write(fmt_str.as_bytes())?;
+                print_field(stdout, state_line[dx-sdx+slx])?;
             }
             stdout.write(&self.empty_line.as_slice()[sdx+fdw..dispw])?;
         }
         for dy in [sdy+fdh..disph] {
             stdout.write(self.empty_line.as_slice())?;
         }
-        
+        // display status bar
+        write!(stdout, "xxxx")?;
         Ok(())
     }
     
-    fn make_move_fast(&mut self, d: Direction) {
+    fn make_move_fast<W: Write>(&mut self, stdout: &mut W, d: Direction)
+                -> Result<(), Box<dyn Error>> {
+        write!(stdout, "{}", cursor::Goto((self.state.player_x-self.display_x+1) as u16,
+                    (self.state.player_y-self.display_y+1) as u16))?;
+        Ok(())
     }
     
-    fn undo_move_fast(&mut self) {
+    fn undo_move_fast<W: Write>(&mut self, stdout: &mut W) -> Result<(), Box<dyn Error>> {
+        write!(stdout, "{}", cursor::Goto((self.state.player_x-self.display_x+1) as u16,
+                    (self.state.player_y-self.display_y+1) as u16))?;
+        Ok(())
     }
     
-    fn display_game<W: Write>(&self, stdout: &mut W) {
-        
+    fn display_game<W: Write>(&self, stdout: &mut W) -> Result<(), Box<dyn Error>> {
+        self.display_level(stdout, self.state.player_x, self.state.player_y)
     }
     
-    fn make_move(&mut self, d: Direction) -> bool {
-        false
+    fn make_move<W: Write>(&mut self, stdout: &mut W, d: Direction) ->
+                    Result<bool, Box<dyn Error>> {
+        let (mv, _) = self.state.make_move(d);
+        if mv { self.display_game(stdout)?; }
+        Ok(mv)
     }
     
-    fn undo_move(&mut self) -> bool {
-        false
+    fn undo_move<W: Write>(&mut self, stdout: &mut W) ->
+                    Result<bool, Box<dyn Error>> {
+        let mv = self.state.undo_move();
+        if mv { self.display_game(stdout)?; }
+        Ok(mv)
     }
     
     pub fn start(&mut self) -> Result<GameResult, Box<dyn Error>> {
         let stdin = io::stdin();
         let mut stdout = io::stdout().into_raw_mode()?;
         
-        write!(stdout, "{}{}", clear::All, cursor::Goto(1, 1))?;
+        write!(stdout, "{}{}{}{}", clear::All, Bg(Black), Fg(White),
+                    cursor::Goto(1, 1))?;
         stdout.flush()?;
         
         self.state.reset();
-        self.display_game(&mut stdout);
+        self.display_game(&mut stdout)?;
         
         for e in std::io::stdin().events() {
+            if self.state.is_done() { break; }
+            match e {
+                Ok(Event::Key(k)) => {
+                    match k {
+                        Key::Left => { self.make_move(&mut stdout, Left)?; }
+                        Key::Right => { self.make_move(&mut stdout, Right)?; }
+                        Key::Up => { self.make_move(&mut stdout, Up)?; }
+                        Key::Down => { self.make_move(&mut stdout, Down)?; }
+                        Key::Backspace => { self.undo_move(&mut stdout)?; }
+                        Key::Esc => { return Ok(GameResult::Canceled); }
+                        _ => {},
+                    };
+                }
+                _ => ()
+            };
         }
         Ok(GameResult::Solved)
     }
