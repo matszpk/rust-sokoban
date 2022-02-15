@@ -123,29 +123,88 @@ impl<'a> TermGame<'a> {
             stdout.write(self.empty_line.as_slice())?;
         }
         // display status bar
-        
-        write!(stdout, "Moves: {:>7}  Pushes: {:>7}", self.state.moves().len(),
-                self.state.pushes_count())?;
+        self.display_statusbar(stdout)
+    }
+    
+    fn display_statusbar<W: Write>(&self, stdout: &mut W) ->
+                    Result<(), Box<dyn Error>> {
+        // display status bar
+        write!(stdout, "{}Moves: {:>7}  Pushes: {:>7}",
+                cursor::Goto(1, (self.term_height-1+1) as u16),
+                self.state.moves().len(), self.state.pushes_count())?;
         stdout.flush()?;
         Ok(())
+    }
+    
+    fn display_move_fast<W: Write>(&self, stdout: &mut W,
+                player_x: usize, player_y: usize, dir: Direction)
+                -> Result<(), Box<dyn Error>> {
+        let levelw = self.state.level.width();
+        let levelh = self.state.level.height();
+        let dispw = self.term_width;
+        let disph = self.term_height-1;
+        let scx = (dispw>>1)-(levelw>>1);
+        let scy = (disph>>1)-(levelh>>1);
+        match dir {
+            Left|PushLeft|Right|PushRight => {
+                write!(stdout, "{}", cursor::Goto((scx+player_x-1+1) as u16,
+                    (scy+player_y+1) as u16))?;
+                print_field(stdout, self.state.area()[levelw*player_y + player_x-1])?;
+                print_field(stdout, self.state.area()[levelw*player_y + player_x])?;
+                print_field(stdout, self.state.area()[levelw*player_y + player_x+1])?;
+            }
+            Up|PushUp|Down|PushDown => {
+                write!(stdout, "{}", cursor::Goto((scx+player_x+1) as u16,
+                    (scy+player_y-1+1) as u16))?;
+                print_field(stdout, self.state.area()[levelw*(player_y-1) + player_x])?;
+                write!(stdout, "{}", cursor::Goto((scx+player_x+1) as u16,
+                    (scy+player_y+1) as u16))?;
+                print_field(stdout, self.state.area()[levelw*(player_y) + player_x])?;
+                write!(stdout, "{}", cursor::Goto((scx+player_x+1) as u16,
+                    (scy+player_y+1+1) as u16))?;
+                print_field(stdout, self.state.area()[levelw*(player_y+1) + player_x])?;
+            }
+            _ => {}
+        };
+        self.display_statusbar(stdout)
     }
     
     fn display_game<W: Write>(&self, stdout: &mut W) -> Result<(), Box<dyn Error>> {
         self.display_level(stdout, self.state.player_x, self.state.player_y)
     }
     
+    fn display_change<W: Write>(&self, stdout: &mut W,
+                player_x: usize, player_y: usize, dir: Direction)
+                        -> Result<(), Box<dyn Error>> {
+        let levelw = self.state.level.width();
+        let levelh = self.state.level.height();
+        let dispw = self.term_width;
+        let disph = self.term_height-1;
+        if levelw < dispw && levelh < disph {
+            self.display_move_fast(stdout, player_x, player_y, dir)
+        } else {
+            self.display_game(stdout)
+        }
+    }
+    
     fn make_move<W: Write>(&mut self, stdout: &mut W, d: Direction) ->
                     Result<bool, Box<dyn Error>> {
         let (mv, _) = self.state.make_move(d);
-        if mv { self.display_game(stdout)?; }
+        if mv { self.display_change(stdout, self.state.player_x, self.state.player_y,
+                *self.state.moves().last().unwrap())?; }
         Ok(mv)
     }
     
     fn undo_move<W: Write>(&mut self, stdout: &mut W) ->
                     Result<bool, Box<dyn Error>> {
-        let mv = self.state.undo_move();
-        if mv { self.display_game(stdout)?; }
-        Ok(mv)
+        let old_player_x = self.state.player_x;
+        let old_player_y = self.state.player_y;
+        if let Some(l) = self.state.moves().last() {
+            let last_dir = *l;
+            self.state.undo_move();
+            self.display_change(stdout, old_player_x, old_player_y, last_dir)?;
+            Ok(true)
+        } else { Ok(false) }
     }
     
     /// Start game in terminal.
