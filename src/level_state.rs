@@ -33,6 +33,7 @@ pub struct LevelState<'a> {
     pub(crate) player_y: usize,
     area: Vec<Field>,
     moves: Vec<Direction>,
+    pushes_count: usize,
 }
 
 impl<'a> LevelState<'a> {
@@ -42,7 +43,7 @@ impl<'a> LevelState<'a> {
             let player_x = pp % level.width();
             let player_y = pp / level.width();
             Ok(LevelState{ level, player_x, player_y, area: level.area().clone(),
-                    moves: vec!() })
+                    moves: vec!(), pushes_count: 0 })
         } else {
             Err(NoPlayer)
         }
@@ -61,6 +62,10 @@ impl<'a> LevelState<'a> {
         &self.area
     }
     
+    pub fn pushes_count(&self) -> usize {
+        self.pushes_count
+    }
+    
     /// Reset level state to original state - undo all moves.
     pub fn reset(&mut self) {
         if let Some(pp) = self.level.area().iter().position(|x| x.is_player()) {
@@ -68,6 +73,7 @@ impl<'a> LevelState<'a> {
             self.player_x = pp % self.level.width();
             self.player_y = pp / self.level.width();
             self.area.copy_from_slice(self.level.area());
+            self.pushes_count = 0;
         } else {
             panic!("No player!");
         }
@@ -147,6 +153,7 @@ impl<'a> LevelState<'a> {
                             self.player_x = new_x;
                             self.player_y = new_y;
                             self.moves.push(push_dir);
+                            self.pushes_count += 1;
                             (true, true)
                         } else { (false, false) }
                     } else {
@@ -198,6 +205,7 @@ impl<'a> LevelState<'a> {
             if let Some(next_pos) = pnext_pos {
                 self.area[next_pos].unset_pack();
                 self.area[this_pos].set_pack();
+                self.pushes_count -= 1;
             } else {
                 self.area[this_pos].unset_player();
             }
@@ -240,7 +248,7 @@ mod test {
              #   $$$#\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![Left] },
+            moves: vec![Left], pushes_count: 0 },
             lstate);
         assert_eq!(true, lstate.undo_move());
         assert_eq!(old_lstate, lstate);
@@ -257,7 +265,7 @@ mod test {
              #   $$$#\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![Right] },
+            moves: vec![Right], pushes_count: 0 },
             lstate);
         assert_eq!(true, lstate.undo_move());
         assert_eq!(old_lstate, lstate);
@@ -274,7 +282,7 @@ mod test {
              #   $$$#\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![Up] },
+            moves: vec![Up], pushes_count: 0 },
             lstate);
         assert_eq!(true, lstate.undo_move());
         assert_eq!(old_lstate, lstate);
@@ -291,7 +299,7 @@ mod test {
              # @ $$$#\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![Down] },
+            moves: vec![Down], pushes_count: 0 },
             lstate);
         assert_eq!(true, lstate.undo_move());
         assert_eq!(old_lstate, lstate);
@@ -317,7 +325,7 @@ mod test {
              #   $$$#\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![Left] },
+            moves: vec![Left], pushes_count: 0 },
             lstate);
         let mut lstate2 = lstate.clone();
         assert_eq!(true, lstate2.undo_move());
@@ -334,7 +342,7 @@ mod test {
              #   $$$#\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![Left,Right] },
+            moves: vec![Left,Right], pushes_count: 0 },
             lstate);
         assert_eq!(true, lstate.undo_move());
         assert_eq!(old_lstate, lstate);
@@ -352,7 +360,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 1, player_y: 2,
             area: level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         
         let level = Level::from_str("git", 8, 6,
@@ -367,7 +375,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 6, player_y: 2,
             area: level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         
         let level = Level::from_str("git", 8, 6,
@@ -382,7 +390,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 3, player_y: 1,
             area: level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         
         let level = Level::from_str("git", 8, 6,
@@ -397,7 +405,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 3, player_y: 4,
             area: level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         
         // pushes
@@ -422,7 +430,7 @@ mod test {
              #   $  #\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![PushLeft] },
+            moves: vec![PushLeft], pushes_count: 1 },
             lstate);
         assert_eq!(true, lstate.undo_move());
         assert_eq!(old_lstate, lstate);
@@ -440,7 +448,7 @@ mod test {
              #   $  #\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![PushRight] },
+            moves: vec![PushRight], pushes_count: 1 },
             lstate);
         assert_eq!(true, lstate.undo_move());
         assert_eq!(old_lstate, lstate);
@@ -458,7 +466,7 @@ mod test {
              #   $  #\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![PushUp] },
+            moves: vec![PushUp], pushes_count: 1 },
             lstate);
         assert_eq!(true, lstate.undo_move());
         assert_eq!(old_lstate, lstate);
@@ -476,7 +484,7 @@ mod test {
              #   @  #\
              #   $  # \
               ###### ").unwrap().area().clone(),
-            moves: vec![PushDown] },
+            moves: vec![PushDown], pushes_count: 1 },
             lstate);
         assert_eq!(true, lstate.undo_move());
         assert_eq!(old_lstate, lstate);
@@ -503,7 +511,7 @@ mod test {
              #   $  #\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![PushLeft] },
+            moves: vec![PushLeft], pushes_count: 1 },
             lstate);
         let mut lstate2 = lstate.clone();
         assert_eq!(true, lstate2.undo_move());
@@ -521,7 +529,7 @@ mod test {
              #   $  #\
              #      # \
               ###### ").unwrap().area().clone(),
-            moves: vec![PushLeft, PushLeft] },
+            moves: vec![PushLeft, PushLeft], pushes_count: 2 },
             lstate);
         assert_eq!(true, lstate.undo_move());
         assert_eq!(old_lstate, lstate);
@@ -540,7 +548,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 3,
             area:level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         let level = Level::from_str("git", 8, 7,
             " ###### \
@@ -555,7 +563,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 3,
             area:level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         let level = Level::from_str("git", 8, 7,
             " ###### \
@@ -570,7 +578,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 3,
             area:level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         
         let level = Level::from_str("git", 8, 7,
@@ -586,7 +594,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 3,
             area:level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         let level = Level::from_str("git", 8, 7,
             " ###### \
@@ -601,7 +609,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 3,
             area:level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         
         let level = Level::from_str("git", 8, 7,
@@ -617,7 +625,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 3,
             area:level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         let level = Level::from_str("git", 8, 7,
             " ###### \
@@ -632,7 +640,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 3,
             area:level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         
         let level = Level::from_str("git", 8, 7,
@@ -648,7 +656,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 3,
             area:level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
         let level = Level::from_str("git", 8, 7,
             " ###### \
@@ -663,7 +671,7 @@ mod test {
         assert_eq!(LevelState{ level: &level,
             player_x: 4, player_y: 3,
             area:level.area().clone(),
-            moves: vec![] },
+            moves: vec![], pushes_count: 0 },
             lstate);
     }
     
