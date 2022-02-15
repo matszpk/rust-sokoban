@@ -230,6 +230,31 @@ mod test {
     use super::*;
     
     #[test]
+    fn test_failed_new_state() {
+        let level = Level::from_str("git", 8, 6,
+            " ###### \
+             #      #\
+             # @  ..#\
+             #   $$$#\
+             #      # \
+              ###### ").unwrap();
+        let mut errors = CheckErrors::new();
+        errors.push(TooFewTargets(3));
+        assert_eq!(Err(errors), LevelState::new(&level));
+        
+        let level = Level::from_str("git", 8, 6,
+            " ###### \
+             #      #\
+             #   ...#\
+             #   $$$#\
+             #      # \
+              ###### ").unwrap();
+        let mut errors = CheckErrors::new();
+        errors.push(NoPlayer);
+        assert_eq!(Err(errors), LevelState::new(&level));
+    }
+    
+    #[test]
     fn test_make_move_and_undo_move() {
         let level = Level::from_str("git", 8, 6,
             " ###### \
