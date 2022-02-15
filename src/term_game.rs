@@ -73,7 +73,7 @@ fn print_field<W: Write>(stdout: &mut W,f: Field) -> Result<(), Box<dyn Error>> 
         Wall => "░".to_string(),
         Player => "o".to_string(),
         Pack => "▒".to_string(),
-        Target => format!("{}{}", Bg(Yellow), Bg(Black)),
+        Target => format!("{} {}", Bg(Yellow), Bg(Black)),
         PlayerOnTarget => format!("{}o{}", Bg(Yellow), Bg(Black)),
         PackOnTarget => format!("{}▒{}", Bg(Yellow), Bg(Black)),
         _ => { panic!("Unexpected!"); },
@@ -109,7 +109,7 @@ impl<'a> TermGame<'a> {
         let (sdy, sly, fdh) = determine_display_and_level_position(levelh, disph, cy);
         
         // fill empties
-        for dy in [0..sdy] {
+        for dy in 0..sdy {
             stdout.write(self.empty_line.as_slice())?;
         }
         for dy in sdy..sdy+fdh {
@@ -121,11 +121,13 @@ impl<'a> TermGame<'a> {
             }
             stdout.write(&self.empty_line.as_slice()[sdx+fdw..dispw])?;
         }
-        for dy in [sdy+fdh..disph] {
+        for dy in sdy+fdh..disph {
             stdout.write(self.empty_line.as_slice())?;
         }
         // display status bar
-        write!(stdout, "xxxx")?;
+        
+        write!(stdout, "Moves: {:>5}", self.state.moves().len())?;
+        stdout.flush()?;
         Ok(())
     }
     
@@ -187,6 +189,7 @@ impl<'a> TermGame<'a> {
                 }
                 _ => ()
             };
+            if self.state.is_done() { break; }
         }
         Ok(GameResult::Solved)
     }
