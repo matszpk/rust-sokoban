@@ -1,4 +1,4 @@
-// lib.rs - main library of sokoban
+// term_utils.rs - main library of sokoban
 //
 // sokoban - Sokoban game
 // Copyright (C) 2022  Mateusz Szpakowski
@@ -17,20 +17,9 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-mod defs;
-pub use self::defs::*; 
+use std::io;
+use std::io::Write;
 
-mod level;
-pub use self::level::*;
-
-mod level_state;
-pub use self::level_state::*;
-
-mod level_set;
-pub use self::level_set::*;
-
-mod term_game;
-pub use self::term_game::*;
-
-mod term_utils;
-pub use self::term_utils::*;
+pub fn term_dialog<W: Write>(stdout: &mut W, text: &str) -> io::Result<()> {
+    Ok(())
+}
