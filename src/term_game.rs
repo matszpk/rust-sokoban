@@ -166,12 +166,14 @@ impl<'a> TermGame<'a> {
         let stdin = io::stdin();
         let mut stdout = io::stdout().into_raw_mode()?;
         
-        write!(stdout, "{}{}{}{}", clear::All, Bg(Black), Fg(White),
+        write!(stdout, "{}{}{}{}", Bg(Black), Fg(White), clear::All,
                     cursor::Goto(1, 1))?;
         stdout.flush()?;
         
+        let mut stdout = cursor::HideCursor::from(stdout);
         self.state.reset();
         self.display_game(&mut stdout)?;
+        
         
         for e in std::io::stdin().events() {
             if self.state.is_done() { break; }
