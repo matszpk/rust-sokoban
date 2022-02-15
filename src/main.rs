@@ -34,11 +34,8 @@ fn main() {
     if levelset_index >= levels.len() {
         panic!("Beyond levels number");
     }
-    if let Ok(ref level) = levels[levelset_index] {
-        let mut level_state = LevelState::new(&level).unwrap();
-        let mut term_game = TermGame::create(&mut level_state);
-        term_game.start().unwrap();
-    } else if let Err(ref err) = levels[levelset_index] {
-        panic!("{}", err);
-    }
+    let level = levels[levelset_index].as_ref().unwrap();
+    let mut level_state = LevelState::new(&level).unwrap();
+    let mut term_game = TermGame::create(&mut level_state);
+    term_game.start().unwrap();
 }
