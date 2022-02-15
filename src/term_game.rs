@@ -17,7 +17,6 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-use std::error::Error;
 use std::io;
 use std::io::Write;
 
@@ -65,7 +64,7 @@ fn determine_display_and_level_position(leveldim: usize, dispdim: usize,
     }
 }
 
-fn print_field<W: Write>(stdout: &mut W,f: Field) -> Result<(), Box<dyn Error>> {
+fn print_field<W: Write>(stdout: &mut W,f: Field) -> Result<(), io::Error> {
     let fmt_str: String = match f {
         Empty => " ".to_string(),
         Wall => "░".to_string(),
@@ -95,7 +94,7 @@ impl<'a> TermGame<'a> {
     
     // cx, cy - position of level to display at center of the display.
     fn display_level<W: Write>(&self, stdout: &mut W,
-                cx: usize, cy: usize) -> Result<(), Box<dyn Error>> {
+                cx: usize, cy: usize) -> Result<(), io::Error> {
         
         write!(stdout, "{}{}", cursor::Goto(1, 1), Bg(Black))?;
         let levelw = self.state.level.width();
@@ -127,7 +126,7 @@ impl<'a> TermGame<'a> {
     }
     
     fn display_statusbar<W: Write>(&self, stdout: &mut W) ->
-                    Result<(), Box<dyn Error>> {
+                    Result<(), io::Error> {
         // display status bar
         write!(stdout, "{}{:<10}  Moves: {:>7}  Pushes: {:>7}",
                 cursor::Goto(1, (self.term_height-1+1) as u16),
@@ -139,7 +138,7 @@ impl<'a> TermGame<'a> {
     
     fn display_move_fast<W: Write>(&self, stdout: &mut W,
                 player_x: usize, player_y: usize, dir: Direction)
-                -> Result<(), Box<dyn Error>> {
+                -> Result<(), io::Error> {
         let levelw = self.state.level.width();
         let levelh = self.state.level.height();
         let dispw = self.term_width;
@@ -170,13 +169,13 @@ impl<'a> TermGame<'a> {
         self.display_statusbar(stdout)
     }
     
-    fn display_game<W: Write>(&self, stdout: &mut W) -> Result<(), Box<dyn Error>> {
+    fn display_game<W: Write>(&self, stdout: &mut W) -> Result<(), io::Error> {
         self.display_level(stdout, self.state.player_x, self.state.player_y)
     }
     
     fn display_change<W: Write>(&self, stdout: &mut W,
                 player_x: usize, player_y: usize, dir: Direction)
-                        -> Result<(), Box<dyn Error>> {
+                        -> Result<(), io::Error> {
         let levelw = self.state.level.width();
         let levelh = self.state.level.height();
         let dispw = self.term_width;
@@ -189,7 +188,7 @@ impl<'a> TermGame<'a> {
     }
     
     fn make_move<W: Write>(&mut self, stdout: &mut W, d: Direction) ->
-                    Result<bool, Box<dyn Error>> {
+                    Result<bool, io::Error> {
         let (mv, _) = self.state.make_move(d);
         if mv { self.display_change(stdout, self.state.player_x, self.state.player_y,
                 *self.state.moves().last().unwrap())?; }
@@ -197,7 +196,7 @@ impl<'a> TermGame<'a> {
     }
     
     fn undo_move<W: Write>(&mut self, stdout: &mut W) ->
-                    Result<bool, Box<dyn Error>> {
+                    Result<bool, io::Error> {
         let old_player_x = self.state.player_x;
         let old_player_y = self.state.player_y;
         if let Some(l) = self.state.moves().last() {
@@ -209,7 +208,7 @@ impl<'a> TermGame<'a> {
     }
     
     /// Start game in terminal.
-    pub fn start(&mut self) -> Result<GameResult, Box<dyn Error>> {
+    pub fn start(&mut self) -> Result<GameResult, io::Error> {
         let mut stdout = io::stdout().into_raw_mode()?;
         
         write!(stdout, "{}{}{}{}", Bg(Black), Fg(White), clear::All,
