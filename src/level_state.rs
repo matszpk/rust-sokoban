@@ -52,6 +52,11 @@ impl<'a> LevelState<'a> {
         }
     }
     
+    // Return level.
+    pub fn level(&self) -> &'a Level {
+        self.level
+    }
+    
     /// Return player X position.
     pub fn player_x(&self) -> usize {
         self.player_x

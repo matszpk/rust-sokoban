@@ -129,8 +129,9 @@ impl<'a> TermGame<'a> {
     fn display_statusbar<W: Write>(&self, stdout: &mut W) ->
                     Result<(), Box<dyn Error>> {
         // display status bar
-        write!(stdout, "{}Moves: {:>7}  Pushes: {:>7}",
+        write!(stdout, "{}{:<10}  Moves: {:>7}  Pushes: {:>7}",
                 cursor::Goto(1, (self.term_height-1+1) as u16),
+                self.state.level().name(),
                 self.state.moves().len(), self.state.pushes_count())?;
         stdout.flush()?;
         Ok(())
@@ -231,6 +232,7 @@ impl<'a> TermGame<'a> {
                         Key::Down => { self.make_move(&mut stdout, Down)?; }
                         Key::Backspace => { self.undo_move(&mut stdout)?; }
                         Key::Esc => { return Ok(GameResult::Canceled); }
+                        Key::Char('q') => { return Ok(GameResult::Canceled); }
                         _ => {},
                     };
                 }
