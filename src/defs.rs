@@ -279,9 +279,12 @@ pub(crate) fn is_not_field(x: char) -> bool {
 }
 
 /// Possible game result.
+#[derive(PartialEq,Eq,Copy,Clone)]
 pub enum GameResult {
     /// If level solved.
     Solved,
     /// If game canceled.
     Canceled,
+    // if game quit.
+    Quit,
 }

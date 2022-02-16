@@ -25,22 +25,14 @@ use termion::cursor;
 
 fn main() {
     let mut args = env::args();
-    if args.len() < 3 {
-        println!("No file and level");
+    if args.len() < 2 {
+        panic!("No file");
     }
     args.next();
     let levelset_path = args.next().unwrap();
-    let levelset_index: usize = args.next().unwrap().parse().unwrap();
-    println!("Levelset: {}, Level: {}", levelset_path, levelset_index);
     let levelset = LevelSet::from_file(levelset_path).unwrap();
-    let levels = levelset.levels();
-    if levelset_index >= levels.len() {
-        panic!("Beyond levels number");
-    }
-    let level = levels[levelset_index].as_ref().unwrap();
-    let mut level_state = LevelState::new(&level).unwrap();
     let stdout = io::stdout().into_raw_mode().unwrap();
     let mut stdout = cursor::HideCursor::from(stdout);
-    let mut term_game = TermGame::create(&mut stdout, &mut level_state);
-    term_game.start().unwrap();
+    let mut term_levelset = TermLevelSet::create(&mut stdout, &levelset);
+    term_levelset.start().unwrap();
 }

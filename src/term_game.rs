@@ -77,8 +77,8 @@ impl<'a, W: Write> TermLevelSet<'a, W> {
             }
         }
         let max_line_len = lines.iter().map(|l| l.len()).max().unwrap_or_default();
-        let startx = (self.term_width - max_line_len + 4)>>1;
-        let starty = (self.term_height - lines.len() + 4)>>1;
+        let startx = (self.term_width - max_line_len - 4)>>1;
+        let starty = (self.term_height - lines.len() - 4)>>1;
         
         // draw message
         // prepare lines
@@ -102,7 +102,7 @@ impl<'a, W: Write> TermLevelSet<'a, W> {
             let l = lines[i];
             write!(self.stdout, "{}│ ", cursor::Goto((startx+1) as u16,
                             (starty+i+2+1) as u16))?;
-            self.stdout.write(l.as_bytes())?;
+            write!(self.stdout, "{:^width$}", l, width=max_line_len)?;
             write!(self.stdout, " │")?;
         }
         
@@ -112,7 +112,12 @@ impl<'a, W: Write> TermLevelSet<'a, W> {
         write!(self.stdout, "{}└", cursor::Goto((startx+1) as u16,
                         (starty+3+lines.len()+1) as u16))?;
         self.stdout.write(horiz_line.as_bytes())?;
-        self.stdout.write("└".as_bytes())?;
+        self.stdout.write("┘".as_bytes())?;
+        self.stdout.flush()?;
+        
+        // wait for key.
+        if let Some(e) = std::io::stdin().keys().next() { e?; }
+        
         Ok(())
     }
     
@@ -122,11 +127,30 @@ impl<'a, W: Write> TermLevelSet<'a, W> {
                     cursor::Goto(1, 1))?;
         self.stdout.flush()?;
         
-        self.display_message("This is test message.")?;
-        
         for l in self.levelset.levels() {
+            if let Ok(ref level) = l {
+                match LevelState::new(level) {
+                    Ok(mut ls) => {
+                        let gr = TermGame::create(self.stdout, &mut ls).start()?;
+                        match gr {
+                            GameResult::Solved => 
+                                { self.display_message("Level has been solved.")?; }
+                            GameResult::Canceled =>
+                                { self.display_message("Level has been canceled.")?; }
+                            GameResult::Quit => { 
+                                    self.display_message("Game quit.")?;
+                                    break;
+                                }
+                        }
+                    },
+                    Err(err) => {
+                        self.display_message(format!("{}", err).as_str())?;
+                    }
+                }
+            }
         }
         
+        write!(self.stdout, "{}{}", clear::All, cursor::Goto(1, 1))?;
         Ok(())
     }
 }
@@ -303,21 +327,20 @@ impl<'a, W: Write> TermGame<'a, W> {
         self.state.reset();
         self.display_game()?;
         
-        for e in std::io::stdin().keys() {
-            if self.state.is_done() { break; }
-            if let Ok(k) = e {
-                match k {
+        if !self.state.is_done() {
+            for e in std::io::stdin().keys() {
+                match e? {
                     Key::Left => { self.make_move(Left)?; }
                     Key::Right => { self.make_move(Right)?; }
                     Key::Up => { self.make_move(Up)?; }
                     Key::Down => { self.make_move(Down)?; }
                     Key::Backspace => { self.undo_move()?; }
                     Key::Esc => { return Ok(GameResult::Canceled); }
-                    Key::Char('q') => { return Ok(GameResult::Canceled); }
+                    Key::Char('q') => { return Ok(GameResult::Quit); }
                     _ => {},
                 };
+                if self.state.is_done() { break; }
             }
-            if self.state.is_done() { break; }
         }
         Ok(GameResult::Solved)
     }
