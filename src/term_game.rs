@@ -61,7 +61,7 @@ impl<'a, W: Write> TermLevelSet<'a, W> {
             let mut next_line = i+maxlen;
             if next_line < text.len() {
                 if let Some(pos) = text[i..next_line].rfind(
-                                    &[' ', '.', ',', ';', '\n', '\t']) {
+                            |c| c==' ' || c=='.' || c==';' || c==',' || c=='\n' || c=='\t') {
                     next_line = i+pos+1;
                     let mut p = pos;
                     while p>1 && (textb[i+p]==b' ' || textb[i+p]==b'\n' ||
