@@ -144,7 +144,8 @@ impl<'a, W: Write> TermLevelSet<'a, W> {
                         }
                     },
                     Err(err) => {
-                        self.display_message(format!("{}", err).as_str())?;
+                        self.display_message(format!("Level '{}' have errors: {}",
+                                    level.name(), err).as_str())?;
                     }
                 }
             }
