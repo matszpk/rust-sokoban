@@ -30,4 +30,4 @@ mod level_set;
 pub use self::level_set::*;
 
 mod term_game;
-pub use self::term_game::*;;
+pub use self::term_game::*;
