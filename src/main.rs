@@ -30,9 +30,15 @@ fn main() {
     }
     args.next();
     let levelset_path = args.next().unwrap();
-    let levelset = LevelSet::from_file(levelset_path).unwrap();
-    let stdout = io::stdout().into_raw_mode().unwrap();
-    let mut stdout = cursor::HideCursor::from(stdout);
-    let mut term_levelset = TermLevelSet::create(&mut stdout, &levelset);
-    term_levelset.start().unwrap();
+    match LevelSet::from_file(levelset_path) {
+        Ok(levelset) => {
+            let stdout = io::stdout().into_raw_mode().unwrap();
+            let mut stdout = cursor::HideCursor::from(stdout);
+            let mut term_levelset = TermLevelSet::create(&mut stdout, &levelset);
+            term_levelset.start().unwrap();
+        }
+        Err(err) => {
+            eprintln!("Some error during loading levelset: {}", err);
+        }
+    } 
 }
