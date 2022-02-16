@@ -26,7 +26,7 @@ use termion::input::TermRead;
 use termion::color::*;
 use termion::cursor;
 use termion::raw::IntoRawMode;
-use termion::event::{Event,Key};
+use termion::event::Key;
 
 use crate::defs::*;
 
@@ -219,23 +219,20 @@ impl<'a> TermGame<'a> {
         self.state.reset();
         self.display_game(&mut stdout)?;
         
-        for e in std::io::stdin().events() {
+        for e in std::io::stdin().keys() {
             if self.state.is_done() { break; }
-            match e {
-                Ok(Event::Key(k)) => {
-                    match k {
-                        Key::Left => { self.make_move(&mut stdout, Left)?; }
-                        Key::Right => { self.make_move(&mut stdout, Right)?; }
-                        Key::Up => { self.make_move(&mut stdout, Up)?; }
-                        Key::Down => { self.make_move(&mut stdout, Down)?; }
-                        Key::Backspace => { self.undo_move(&mut stdout)?; }
-                        Key::Esc => { return Ok(GameResult::Canceled); }
-                        Key::Char('q') => { return Ok(GameResult::Canceled); }
-                        _ => {},
-                    };
-                }
-                _ => ()
-            };
+            if let Ok(k) = e {
+                match k {
+                    Key::Left => { self.make_move(&mut stdout, Left)?; }
+                    Key::Right => { self.make_move(&mut stdout, Right)?; }
+                    Key::Up => { self.make_move(&mut stdout, Up)?; }
+                    Key::Down => { self.make_move(&mut stdout, Down)?; }
+                    Key::Backspace => { self.undo_move(&mut stdout)?; }
+                    Key::Esc => { return Ok(GameResult::Canceled); }
+                    Key::Char('q') => { return Ok(GameResult::Canceled); }
+                    _ => {},
+                };
+            }
             if self.state.is_done() { break; }
         }
         Ok(GameResult::Solved)
