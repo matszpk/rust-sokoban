@@ -25,7 +25,6 @@ use termion::clear;
 use termion::input::TermRead;
 use termion::color::*;
 use termion::cursor;
-use termion::raw::IntoRawMode;
 use termion::event::Key;
 
 use crate::defs::*;
@@ -37,8 +36,9 @@ use Field::*;
 use Direction::*;
 
 /// The game in terminal mode. Structure contains level state and some terminal utilities.
-pub struct TermGame<'a> {
+pub struct TermGame<'a, W: Write> {
     state: &'a mut LevelState<'a>,
+    stdout: &'a mut W,
     term_width: usize,
     term_height: usize,
     empty_line: Vec<u8>,
@@ -64,25 +64,11 @@ fn determine_display_and_level_position(leveldim: usize, dispdim: usize,
     }
 }
 
-fn print_field<W: Write>(stdout: &mut W,f: Field) -> Result<(), io::Error> {
-    let fmt_str: String = match f {
-        Empty => " ".to_string(),
-        Wall => "░".to_string(),
-        Player => "o".to_string(),
-        Pack => "▒".to_string(),
-        Target => format!("{} {}", Bg(Yellow), Bg(Black)),
-        PlayerOnTarget => format!("{}o{}", Bg(Yellow), Bg(Black)),
-        PackOnTarget => format!("{}▒{}", Bg(Yellow), Bg(Black)),
-    };
-    stdout.write(fmt_str.as_bytes())?;
-    Ok(())
-}
-
-impl<'a> TermGame<'a> {
+impl<'a, W: Write> TermGame<'a, W> {
     /// Create terminal game.
-    pub fn create(ls: &'a mut LevelState<'a>) -> TermGame<'a> {
+    pub fn create(stdout: &'a mut W, ls: &'a mut LevelState<'a>) -> TermGame<'a, W> {
         let (width, height) = terminal_size().unwrap();
-        TermGame{ state: ls, term_width: width as usize,
+        TermGame{ state: ls, stdout, term_width: width as usize,
                 term_height: height as usize,
                 empty_line: vec![b' '; width as usize] }
     }
@@ -92,11 +78,23 @@ impl<'a> TermGame<'a> {
         self.state
     }
     
+    fn print_field(&mut self, f: Field) -> io::Result<()> {
+        let fmt_str: String = match f {
+            Empty => " ".to_string(),
+            Wall => "░".to_string(),
+            Player => "o".to_string(),
+            Pack => "▒".to_string(),
+            Target => format!("{} {}", Bg(Yellow), Bg(Black)),
+            PlayerOnTarget => format!("{}o{}", Bg(Yellow), Bg(Black)),
+            PackOnTarget => format!("{}▒{}", Bg(Yellow), Bg(Black)),
+        };
+        self.stdout.write(fmt_str.as_bytes())?;
+        Ok(())
+    }
+    
     // cx, cy - position of level to display at center of the display.
-    fn display_level<W: Write>(&self, stdout: &mut W,
-                cx: usize, cy: usize) -> Result<(), io::Error> {
-        
-        write!(stdout, "{}{}", cursor::Goto(1, 1), Bg(Black))?;
+    fn display_level(&mut self, cx: usize, cy: usize) -> io::Result<()> {
+        write!(self.stdout, "{}{}", cursor::Goto(1, 1), Bg(Black))?;
         let levelw = self.state.level.width();
         let levelh = self.state.level.height();
         // display dimensions
@@ -107,38 +105,34 @@ impl<'a> TermGame<'a> {
         
         // fill empties
         for _ in 0..sdy {
-            stdout.write(self.empty_line.as_slice())?;
+            self.stdout.write(self.empty_line.as_slice())?;
         }
         for dy in sdy..sdy+fdh {
-            let state_line = &self.state.area()[(dy-sdy+sly)*levelw + slx..
-                        (dy-sdy+sly)*levelw + slx + fdw];
-            stdout.write(&self.empty_line.as_slice()[0..sdx])?;
+            self.stdout.write(&self.empty_line.as_slice()[0..sdx])?;
             for dx in sdx..sdx+fdw {
-                print_field(stdout, state_line[dx-sdx])?;
+                self.print_field(self.state.area()[(dy-sdy+sly)*levelw + slx + dx - sdx])?;
             }
-            stdout.write(&self.empty_line.as_slice()[sdx+fdw..dispw])?;
+            self.stdout.write(&self.empty_line.as_slice()[sdx+fdw..dispw])?;
         }
         for _ in sdy+fdh..disph {
-            stdout.write(self.empty_line.as_slice())?;
+            self.stdout.write(self.empty_line.as_slice())?;
         }
         // display status bar
-        self.display_statusbar(stdout)
+        self.display_statusbar()
     }
     
-    fn display_statusbar<W: Write>(&self, stdout: &mut W) ->
-                    Result<(), io::Error> {
+    fn display_statusbar(&mut self) -> io::Result<()> {
         // display status bar
-        write!(stdout, "{}{:<10}  Moves: {:>7}  Pushes: {:>7}",
+        write!(self.stdout, "{}{:<10}  Moves: {:>7}  Pushes: {:>7}",
                 cursor::Goto(1, (self.term_height-1+1) as u16),
                 self.state.level().name(),
                 self.state.moves().len(), self.state.pushes_count())?;
-        stdout.flush()?;
+        self.stdout.flush()?;
         Ok(())
     }
     
-    fn display_move_fast<W: Write>(&self, stdout: &mut W,
-                player_x: usize, player_y: usize, dir: Direction)
-                -> Result<(), io::Error> {
+    fn display_move_fast(&mut self, player_x: usize, player_y: usize,
+                    dir: Direction) -> io::Result<()> {
         let levelw = self.state.level.width();
         let levelh = self.state.level.height();
         let dispw = self.term_width;
@@ -147,87 +141,81 @@ impl<'a> TermGame<'a> {
         let scy = (disph>>1)-(levelh>>1);
         match dir {
             Left|PushLeft|Right|PushRight => {
-                write!(stdout, "{}", cursor::Goto((scx+player_x-1+1) as u16,
+                write!(self.stdout, "{}", cursor::Goto((scx+player_x-1+1) as u16,
                     (scy+player_y+1) as u16))?;
-                print_field(stdout, self.state.area()[levelw*player_y + player_x-1])?;
-                print_field(stdout, self.state.area()[levelw*player_y + player_x])?;
-                print_field(stdout, self.state.area()[levelw*player_y + player_x+1])?;
+                self.print_field(self.state.area()[levelw*player_y + player_x-1])?;
+                self.print_field(self.state.area()[levelw*player_y + player_x])?;
+                self.print_field(self.state.area()[levelw*player_y + player_x+1])?;
             }
             Up|PushUp|Down|PushDown => {
-                write!(stdout, "{}", cursor::Goto((scx+player_x+1) as u16,
+                write!(self.stdout, "{}", cursor::Goto((scx+player_x+1) as u16,
                     (scy+player_y-1+1) as u16))?;
-                print_field(stdout, self.state.area()[levelw*(player_y-1) + player_x])?;
-                write!(stdout, "{}", cursor::Goto((scx+player_x+1) as u16,
+                self.print_field(self.state.area()[levelw*(player_y-1) + player_x])?;
+                write!(self.stdout, "{}", cursor::Goto((scx+player_x+1) as u16,
                     (scy+player_y+1) as u16))?;
-                print_field(stdout, self.state.area()[levelw*(player_y) + player_x])?;
-                write!(stdout, "{}", cursor::Goto((scx+player_x+1) as u16,
+                self.print_field(self.state.area()[levelw*(player_y) + player_x])?;
+                write!(self.stdout, "{}", cursor::Goto((scx+player_x+1) as u16,
                     (scy+player_y+1+1) as u16))?;
-                print_field(stdout, self.state.area()[levelw*(player_y+1) + player_x])?;
+                self.print_field(self.state.area()[levelw*(player_y+1) + player_x])?;
             }
             _ => {}
         };
-        self.display_statusbar(stdout)
+        self.display_statusbar()
     }
     
-    fn display_game<W: Write>(&self, stdout: &mut W) -> Result<(), io::Error> {
-        self.display_level(stdout, self.state.player_x, self.state.player_y)
+    fn display_game(&mut self) -> io::Result<()> {
+        self.display_level(self.state.player_x, self.state.player_y)
     }
     
-    fn display_change<W: Write>(&self, stdout: &mut W,
-                player_x: usize, player_y: usize, dir: Direction)
-                        -> Result<(), io::Error> {
+    fn display_change(&mut self, player_x: usize, player_y: usize,
+                        dir: Direction) -> io::Result<()> {
         let levelw = self.state.level.width();
         let levelh = self.state.level.height();
         let dispw = self.term_width;
         let disph = self.term_height-1;
         if levelw < dispw && levelh < disph {
-            self.display_move_fast(stdout, player_x, player_y, dir)
+            self.display_move_fast(player_x, player_y, dir)
         } else {
-            self.display_game(stdout)
+            self.display_game()
         }
     }
     
-    fn make_move<W: Write>(&mut self, stdout: &mut W, d: Direction) ->
-                    Result<bool, io::Error> {
+    fn make_move(&mut self, d: Direction) -> io::Result<bool> {
         let (mv, _) = self.state.make_move(d);
-        if mv { self.display_change(stdout, self.state.player_x, self.state.player_y,
+        if mv { self.display_change(self.state.player_x, self.state.player_y,
                 *self.state.moves().last().unwrap())?; }
         Ok(mv)
     }
     
-    fn undo_move<W: Write>(&mut self, stdout: &mut W) ->
-                    Result<bool, io::Error> {
+    fn undo_move(&mut self) -> io::Result<bool> {
         let old_player_x = self.state.player_x;
         let old_player_y = self.state.player_y;
         if let Some(l) = self.state.moves().last() {
             let last_dir = *l;
             self.state.undo_move();
-            self.display_change(stdout, old_player_x, old_player_y, last_dir)?;
+            self.display_change(old_player_x, old_player_y, last_dir)?;
             Ok(true)
         } else { Ok(false) }
     }
     
     /// Start game in terminal.
-    pub fn start(&mut self) -> Result<GameResult, io::Error> {
-        let mut stdout = io::stdout().into_raw_mode()?;
-        
-        write!(stdout, "{}{}{}{}", Bg(Black), Fg(White), clear::All,
+    pub fn start(&mut self) -> io::Result<GameResult> {
+        write!(self.stdout, "{}{}{}{}", Bg(Black), Fg(White), clear::All,
                     cursor::Goto(1, 1))?;
-        stdout.flush()?;
+        self.stdout.flush()?;
         
-        let mut stdout = cursor::HideCursor::from(stdout);
         self.state.reset();
-        self.display_game(&mut stdout)?;
+        self.display_game()?;
         
         for e in std::io::stdin().keys() {
             if self.state.is_done() { break; }
             if let Ok(k) = e {
                 match k {
-                    Key::Left => { self.make_move(&mut stdout, Left)?; }
-                    Key::Right => { self.make_move(&mut stdout, Right)?; }
-                    Key::Up => { self.make_move(&mut stdout, Up)?; }
-                    Key::Down => { self.make_move(&mut stdout, Down)?; }
-                    Key::Backspace => { self.undo_move(&mut stdout)?; }
+                    Key::Left => { self.make_move(Left)?; }
+                    Key::Right => { self.make_move(Right)?; }
+                    Key::Up => { self.make_move(Up)?; }
+                    Key::Down => { self.make_move(Down)?; }
+                    Key::Backspace => { self.undo_move()?; }
                     Key::Esc => { return Ok(GameResult::Canceled); }
                     Key::Char('q') => { return Ok(GameResult::Canceled); }
                     _ => {},

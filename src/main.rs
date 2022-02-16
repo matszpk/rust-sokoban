@@ -17,8 +17,11 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+use std::io;
 use std::env;
 use sokobanlib::*;
+use termion::raw::IntoRawMode;
+use termion::cursor;
 
 fn main() {
     let mut args = env::args();
@@ -36,6 +39,8 @@ fn main() {
     }
     let level = levels[levelset_index].as_ref().unwrap();
     let mut level_state = LevelState::new(&level).unwrap();
-    let mut term_game = TermGame::create(&mut level_state);
+    let stdout = io::stdout().into_raw_mode().unwrap();
+    let mut stdout = cursor::HideCursor::from(stdout);
+    let mut term_game = TermGame::create(&mut stdout, &mut level_state);
     term_game.start().unwrap();
 }
