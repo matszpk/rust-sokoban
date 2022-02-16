@@ -30,10 +30,106 @@ use termion::event::Key;
 use crate::defs::*;
 
 use crate::GameResult;
-use crate::LevelState;
+use crate::{LevelState,LevelSet};
 
 use Field::*;
 use Direction::*;
+
+/// The levelset game in terminal mode.
+pub struct TermLevelSet<'a, W: Write> {
+    levelset: &'a LevelSet,
+    stdout: &'a mut W,
+    term_width: usize,
+    term_height: usize,
+}
+
+impl<'a, W: Write> TermLevelSet<'a, W> {
+    /// Create terminal levelset game.
+    pub fn create(stdout: &'a mut W,
+                    levelset: &'a LevelSet) -> TermLevelSet<'a, W> {
+        let (width, height) = terminal_size().unwrap();
+        TermLevelSet{ levelset, stdout, term_width: width as usize,
+                term_height: height as usize }
+    }
+    
+    fn display_message(&mut self, text: &str) -> io::Result<()> {
+        let mut lines = vec![];
+        let mut i = 0;
+        let maxlen = self.term_width-4;
+        let textb = text.as_bytes();
+        loop {
+            let mut next_line = i+maxlen;
+            if next_line < text.len() {
+                if let Some(pos) = text[i..next_line].rfind(
+                                    [' ', '.', ',', ';', '\n', '\t']) {
+                    next_line = i+pos+1;
+                    let mut p = pos;
+                    while p>1 && (textb[i+p]==b' ' || textb[i+p]==b'\n' ||
+                            textb[i+p]==b'\t') {
+                        p-=1;
+                    }
+                    lines.push(&text[i..i+p+1]);
+                }
+                i = next_line;
+            } else { // push last line
+                lines.push(&text[i..]);
+                break;
+            }
+        }
+        let max_line_len = lines.iter().map(|l| l.len()).max().unwrap_or_default();
+        let startx = (self.term_width - max_line_len + 4)>>1;
+        let starty = (self.term_height - lines.len() + 4)>>1;
+        
+        // draw message
+        // prepare lines
+        let mut horiz_line = String::new();
+        for _ in 0..max_line_len+2 {
+            horiz_line.push('─');
+        }
+        let mut empty_line = String::new();
+        empty_line += "│";
+        for _ in 0..max_line_len+2 {
+            empty_line.push(' ');
+        }
+        empty_line += "│";
+        
+        write!(self.stdout, "{}┌", cursor::Goto((startx+1) as u16, (starty+1) as u16))?;
+        self.stdout.write(horiz_line.as_bytes())?;
+        write!(self.stdout, "┐{}", cursor::Goto((startx+1) as u16, (starty+1+1) as u16))?;
+        self.stdout.write(empty_line.as_bytes())?;
+        
+        for i in 0..lines.len() {
+            let l = lines[i];
+            write!(self.stdout, "{}│ ", cursor::Goto((startx+1) as u16,
+                            (starty+i+2+1) as u16))?;
+            self.stdout.write(l.as_bytes())?;
+            write!(self.stdout, " │")?;
+        }
+        
+        write!(self.stdout, "{}", cursor::Goto((startx+1) as u16,
+                        (starty+2+lines.len()+1) as u16))?;
+        self.stdout.write(empty_line.as_bytes())?;
+        write!(self.stdout, "{}└", cursor::Goto((startx+1) as u16,
+                        (starty+3+lines.len()+1) as u16))?;
+        self.stdout.write(horiz_line.as_bytes())?;
+        self.stdout.write("└".as_bytes())?;
+        Ok(())
+    }
+    
+    /// Start game in terminal.
+    pub fn start(&mut self) -> io::Result<()> {
+        write!(self.stdout, "{}{}{}{}", Bg(Black), Fg(White), clear::All,
+                    cursor::Goto(1, 1))?;
+        self.stdout.flush()?;
+        
+        self.display_message("This is test message.")?;
+        
+        for l in self.levelset.levels() {
+        }
+        
+        Ok(())
+    }
+}
 
 /// The game in terminal mode. Structure contains level state and some terminal utilities.
 pub struct TermGame<'a, W: Write> {
