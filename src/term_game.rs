@@ -43,6 +43,86 @@ pub struct TermLevelSet<'a, W: Write> {
     term_height: usize,
 }
 
+fn display_message<W: Write>(term_width: usize, term_height: usize, stdout: &mut W,
+                    text: &str) -> io::Result<()> {
+    let mut lines = vec![];
+    let mut i = 0;
+    let maxlen = term_width-4;
+    let textb = text.as_bytes();
+    loop {
+        let mut next_line = i+maxlen;
+        
+        if next_line < text.len() {
+            if let Some(pos) = text[i..next_line].find('\n') {
+                next_line = i + pos+1;
+                lines.push(&text[i..i+pos]);
+            } else if let Some(pos) = text[i..next_line].rfind(
+                        |c| c==' ' || c=='.' || c==';' || c==',' || c=='\t') {
+                next_line = i+pos+1;
+                let mut p = pos;
+                while p>1 && (textb[i+p]==b' ' || textb[i+p]==b'\n' ||
+                        textb[i+p]==b'\t') {
+                    p-=1;
+                }
+                lines.push(&text[i..i+p+1]);
+            }
+            i = next_line;
+        } else { // push last line
+            if let Some(pos) = text[i..].find('\n') {
+                lines.push(&text[i..i+pos]);
+                i += pos+1;
+                if i >= text.len() { break; }
+            } else {
+                lines.push(&text[i..]);
+                break;
+            }
+        }
+    }
+    let max_line_len = lines.iter().map(|l| l.len()).max().unwrap_or_default();
+    let startx = (term_width - max_line_len - 4)>>1;
+    let starty = (term_height - lines.len() - 4)>>1;
+    
+    // draw message
+    // prepare lines
+    let mut horiz_line = String::new();
+    for _ in 0..max_line_len+2 {
+        horiz_line.push('─');
+    }
+    let mut empty_line = String::new();
+    empty_line += "│";
+    for _ in 0..max_line_len+2 {
+        empty_line.push(' ');
+    }
+    empty_line += "│";
+    
+    write!(stdout, "{}┌", cursor::Goto((startx+1) as u16, (starty+1) as u16))?;
+    stdout.write(horiz_line.as_bytes())?;
+    write!(stdout, "┐{}", cursor::Goto((startx+1) as u16, (starty+1+1) as u16))?;
+    stdout.write(empty_line.as_bytes())?;
+    
+    for i in 0..lines.len() {
+        let l = lines[i];
+        write!(stdout, "{}│ ", cursor::Goto((startx+1) as u16,
+                        (starty+i+2+1) as u16))?;
+        write!(stdout, "{:^width$}", l, width=max_line_len)?;
+        write!(stdout, " │")?;
+    }
+    
+    write!(stdout, "{}", cursor::Goto((startx+1) as u16,
+                    (starty+2+lines.len()+1) as u16))?;
+    stdout.write(empty_line.as_bytes())?;
+    write!(stdout, "{}└", cursor::Goto((startx+1) as u16,
+                    (starty+3+lines.len()+1) as u16))?;
+    stdout.write(horiz_line.as_bytes())?;
+    stdout.write("┘".as_bytes())?;
+    stdout.flush()?;
+    
+    // wait for key.
+    if let Some(e) = std::io::stdin().keys().next() { e?; }
+    
+    Ok(())
+}
+
 impl<'a, W: Write> TermLevelSet<'a, W> {
     /// Create terminal levelset game.
     pub fn create(stdout: &'a mut W,
@@ -50,75 +130,6 @@ impl<'a, W: Write> TermLevelSet<'a, W> {
         let (width, height) = terminal_size().unwrap();
         TermLevelSet{ levelset, stdout, term_width: width as usize,
                 term_height: height as usize }
-    }
-    
-    fn display_message(&mut self, text: &str) -> io::Result<()> {
-        let mut lines = vec![];
-        let mut i = 0;
-        let maxlen = self.term_width-4;
-        let textb = text.as_bytes();
-        loop {
-            let mut next_line = i+maxlen;
-            if next_line < text.len() {
-                if let Some(pos) = text[i..next_line].rfind(
-                            |c| c==' ' || c=='.' || c==';' || c==',' || c=='\n' || c=='\t') {
-                    next_line = i+pos+1;
-                    let mut p = pos;
-                    while p>1 && (textb[i+p]==b' ' || textb[i+p]==b'\n' ||
-                            textb[i+p]==b'\t') {
-                        p-=1;
-                    }
-                    lines.push(&text[i..i+p+1]);
-                }
-                i = next_line;
-            } else { // push last line
-                lines.push(&text[i..]);
-                break;
-            }
-        }
-        let max_line_len = lines.iter().map(|l| l.len()).max().unwrap_or_default();
-        let startx = (self.term_width - max_line_len - 4)>>1;
-        let starty = (self.term_height - lines.len() - 4)>>1;
-        
-        // draw message
-        // prepare lines
-        let mut horiz_line = String::new();
-        for _ in 0..max_line_len+2 {
-            horiz_line.push('─');
-        }
-        let mut empty_line = String::new();
-        empty_line += "│";
-        for _ in 0..max_line_len+2 {
-            empty_line.push(' ');
-        }
-        empty_line += "│";
-        
-        write!(self.stdout, "{}┌", cursor::Goto((startx+1) as u16, (starty+1) as u16))?;
-        self.stdout.write(horiz_line.as_bytes())?;
-        write!(self.stdout, "┐{}", cursor::Goto((startx+1) as u16, (starty+1+1) as u16))?;
-        self.stdout.write(empty_line.as_bytes())?;
-        
-        for i in 0..lines.len() {
-            let l = lines[i];
-            write!(self.stdout, "{}│ ", cursor::Goto((startx+1) as u16,
-                            (starty+i+2+1) as u16))?;
-            write!(self.stdout, "{:^width$}", l, width=max_line_len)?;
-            write!(self.stdout, " │")?;
-        }
-        
-        write!(self.stdout, "{}", cursor::Goto((startx+1) as u16,
-                        (starty+2+lines.len()+1) as u16))?;
-        self.stdout.write(empty_line.as_bytes())?;
-        write!(self.stdout, "{}└", cursor::Goto((startx+1) as u16,
-                        (starty+3+lines.len()+1) as u16))?;
-        self.stdout.write(horiz_line.as_bytes())?;
-        self.stdout.write("┘".as_bytes())?;
-        self.stdout.flush()?;
-        
-        // wait for key.
-        if let Some(e) = std::io::stdin().keys().next() { e?; }
-        
-        Ok(())
     }
     
     /// Start game in terminal.
@@ -134,17 +145,21 @@ impl<'a, W: Write> TermLevelSet<'a, W> {
                         let gr = TermGame::create(self.stdout, &mut ls).start()?;
                         match gr {
                             GameResult::Solved => 
-                                { self.display_message("Level has been solved.")?; }
+                                { display_message(self.term_width, self.term_height,
+                                        self.stdout, "Level has been solved.")?; }
                             GameResult::Canceled =>
-                                { self.display_message("Level has been canceled.")?; }
+                                { display_message(self.term_width,  self.term_height,
+                                        self.stdout, "Level has been canceled.")?; }
                             GameResult::Quit => { 
-                                    self.display_message("Game quit.")?;
+                                    display_message(self.term_width, self.term_height,
+                                        self.stdout, "Quit.")?;
                                     break;
                                 }
                         }
                     },
                     Err(err) => {
-                        self.display_message(format!("Level '{}' have errors: {}",
+                        display_message(self.term_width, self.term_height,
+                                    self.stdout, format!("Level '{}' have errors: {}",
                                     level.name(), err).as_str())?;
                     }
                 }
@@ -331,6 +346,16 @@ impl<'a, W: Write> TermGame<'a, W> {
         if !self.state.is_done() {
             for e in std::io::stdin().keys() {
                 match e? {
+                    Key::F(1) | Key::Char('?') => {
+                        display_message(self.term_width, self.term_height, self.stdout,
+                                "Keys in game:\n\
+                                 Left, Right, Up, Down - move player.\n\
+                                 Backspace - undo move.\n\
+                                 Escape - cancel current level.\n\
+                                 Q - Quit game.\n\
+                                 F1, ? - display help.")?;
+                        self.display_game()?;
+                        }
                     Key::Left => { self.make_move(Left)?; }
                     Key::Right => { self.make_move(Right)?; }
                     Key::Up => { self.make_move(Up)?; }
