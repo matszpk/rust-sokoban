@@ -355,7 +355,7 @@ impl<'a, W: Write> TermGame<'a, W> {
                                  Q - Quit game.\n\
                                  F1, ? - display help.")?;
                         self.display_game()?;
-                        }
+                    }
                     Key::Left => { self.make_move(Left)?; }
                     Key::Right => { self.make_move(Right)?; }
                     Key::Up => { self.make_move(Up)?; }
