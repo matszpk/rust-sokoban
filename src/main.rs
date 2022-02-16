@@ -26,7 +26,8 @@ use termion::cursor;
 fn main() {
     let mut args = env::args();
     if args.len() < 2 {
-        panic!("No file");
+        eprintln!("No file");
+        std::process::exit(1);
     }
     args.next();
     let levelset_path = args.next().unwrap();
@@ -39,6 +40,7 @@ fn main() {
         }
         Err(err) => {
             eprintln!("Some error during loading levelset: {}", err);
+            std::process::exit(1);
         }
     } 
 }
