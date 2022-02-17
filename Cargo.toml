@@ -1,7 +1,7 @@
 [package]
 name = "sokoban"
 authors = ["Mateusz Szpakowski"]
-license = "GNU General Public License v3"
+license = "GNU Lesser General Public License v2.1"
 readme = "README.md"
 version = "0.1.0"
 edition = "2018"
