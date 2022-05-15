@@ -1,5 +1,5 @@
 [package]
-name = "sokoban"
+name = "matszpk-sokoban"
 authors = ["Mateusz Szpakowski"]
 license = "LGPL-2.1-or-later"
 readme = "README.md"
